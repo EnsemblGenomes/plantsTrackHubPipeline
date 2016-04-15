@@ -1,4 +1,4 @@
-# plantsTrackHub
+# plantsTrackHubPipeline
 Pipeline that creates Ensembl plant track hubs given ENA study ids and puts them in the Ensembl Track Hub Registry.<br />
 The track hubs contain the Array Experess' alignments of Ensembl plant genomes to the RNAseq data available in ENA.<br />
 Array Express provides the .cram files of the alignments and using their REST API the pipeline communicates with the AE data.<br />
