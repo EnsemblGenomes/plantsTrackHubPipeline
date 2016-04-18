@@ -279,7 +279,7 @@ sub make_biosample_super_track_obj{
   # returns a has ref or 0 if unsuccessful
   my $metadata_respose = ENA::get_sample_metadata_response_from_ENA_warehouse_rest_call( $sample_id,$meta_keys_aref);  
   if ($metadata_respose==0){
-    print STDERR "No metadata values found for sample $sample_id\n";
+    print STDERR "No metadata values found in ENA warehouse for sample $sample_id\n";
 
   }else{  # if there is metadata
     my %metadata_pairs = %{$metadata_respose};
