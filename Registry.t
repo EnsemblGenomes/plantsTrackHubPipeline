@@ -166,4 +166,16 @@ is_deeply($bioreps_hash_ref, $biorep_ids_from_AE_href, 'got the expected bioreps
 # test registry_get_request method
 # -----
 
+#test18
+my ($stdout10, $stderr10, $exit10) = capture {
+   $registry_obj->registry_get_request();
+};
 
+ok($exit10==0,"Successfully exited the method since no parameter was given");
+
+#test19
+my ($stdout11, $stderr11, $exit11) = capture {
+   $registry_obj->registry_get_request("testing");
+};
+
+ok($exit11==0,"Successfully exited the method since there were some missing parameters");
