@@ -45,7 +45,6 @@ sub register_track_hub{
   my $trackHub_txt_file_url = shift;
   my $assembly_name_accession_pairs = shift; 
 
-
   defined $track_hub_id and $trackHub_txt_file_url and $assembly_name_accession_pairs
     or print "Some required parameters are missing in order to register track hub the Track Hub Registry\n" and return 0;
 
@@ -235,7 +234,7 @@ sub give_all_Registered_track_hub_names{
 
 }
 
-sub get_Registry_hub_last_update { # gives the last update date of the registration of the track hub
+sub get_Registry_hub_last_update { # gives the last update date(unix time) of the registration of the track hub
 
   my $self = shift;
   my $name = shift;  # track hub name, ie study_id
@@ -317,6 +316,9 @@ sub give_all_bioreps_of_study_from_Registry {
   my $self = shift;
   my $name = shift;  # track hub name, ie study_id
 
+  defined $name
+    or print "Track hub name parameter required to get the track hub's bioreps from the Track Hub Registry\n" and return 0;
+
   my $registry_user_name= $self->{username};
   my $registry_pwd = $self->{pwd};
   
@@ -392,6 +394,9 @@ sub registry_get_request {
   my $self = shift;
   my ($server, $endpoint, $user, $token) = @_;
 
+  defined $server and defined $endpoint and defined $user and defined $token
+    or die "Some required parameters are missing when trying to log out from the Track Hub Registry\n";
+
   my $request = GET("$server$endpoint");
   $request->headers->header(user       => $user);
   $request->headers->header(auth_token => $token);
@@ -403,6 +408,7 @@ sub registry_logout {
 
   my $self = shift;
   my ($server, $user, $auth_token) = @_;
+
   defined $server and defined $user and defined $auth_token
     or die "Some required parameters are missing when trying to log out from the Track Hub Registry\n";
 
