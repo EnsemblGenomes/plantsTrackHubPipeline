@@ -4,6 +4,7 @@ use Test::Exception;
 
 use Capture::Tiny ':all';
 use Time::Piece;
+use AEStudy;
 
 # -----
 # checks if the module can load
@@ -137,11 +138,32 @@ ok($method_date_readable eq $current_date_readable,"Successfully given the most 
 # test give_all_bioreps_of_study_from_Registry method
 # -----
 
+#test15
+
+my ($stdout9, $stderr9, $exit9) = capture {
+   $registry_obj->give_all_bioreps_of_study_from_Registry();
+};
+
+ok($exit9==0,"Successfully exited the method since no parameter was given (track hub name)");
+
+
+#test16
+my ($stdout10, $stderr10, $bioreps_hash_ref) = capture {
+   $registry_obj->give_all_bioreps_of_study_from_Registry("SRP045759");
+};
+
+is(ref($bioreps_hash_ref), 'HASH', 'The method returns a hash ref');
+
+#test17
+my $plant_names_AE_response_href = ArrayExpress::get_plant_names_AE_API();
+my $study_obj = AEStudy->new("SRP045759",$plant_names_AE_response_href);
+
+my $biorep_ids_from_AE_href= $study_obj->get_biorep_ids();
+
+is_deeply($bioreps_hash_ref, $biorep_ids_from_AE_href, 'got the expected bioreps ids from the specific study id');
 
 # -----
 # test registry_get_request method
 # -----
 
-# -----
-# test registry_logout method
-# -----
+
