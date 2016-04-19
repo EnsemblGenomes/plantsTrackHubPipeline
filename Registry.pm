@@ -19,6 +19,9 @@ sub new {
   my $username  = shift;
   my $password = shift;
   
+  defined $username and $password
+    or die "Some required parameters are missing in the constructor in order to construct a Registry object\n";
+
   my $self = {
     username  => $username ,
     pwd => $password
@@ -42,6 +45,10 @@ sub register_track_hub{
   my $trackHub_txt_file_url = shift;
   my $assembly_name_accession_pairs = shift; 
 
+
+  defined $track_hub_id and $trackHub_txt_file_url and $assembly_name_accession_pairs
+    or print "Some required parameters are missing in order to register track hub the Track Hub Registry\n" and return 0;
+
   my $return_string;
 
   my $username = $self->{username};
@@ -60,7 +67,7 @@ sub register_track_hub{
   my $request = 
     POST($url,'Content-type' => 'application/json',
 	 #  assemblies => { "$assembly_name" => "$assembly_accession" } }));
-    'Content' => to_json({ url => $trackHub_txt_file_url, type => 'transcriptomics', assemblies => $assemblies }));#, public => 0 }));
+    'Content' => to_json({ url => $trackHub_txt_file_url, type => 'transcriptomics', assemblies => $assemblies , public => 0 }));
   $request->headers->header(user => $username);
   $request->headers->header(auth_token => $auth_token);
 
@@ -107,6 +114,9 @@ sub delete_track_hub{
 
   my $self = shift;
   my $track_hub_id = shift;
+
+  defined $track_hub_id
+    or print "Track hub id parameter required to remove track hub from the Track Hub Registry\n" and return 0;
 
   my $auth_token = eval { $self->{auth_token} };
 
