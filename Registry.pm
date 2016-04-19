@@ -240,6 +240,9 @@ sub get_Registry_hub_last_update { # gives the last update date of the registrat
   my $self = shift;
   my $name = shift;  # track hub name, ie study_id
 
+  defined $name
+    or print "Track hub name parameter required to get the track hub's last update date in the Track Hub Registry\n" and return 0;
+
   my $registry_user_name= $self->{username};
   my $registry_pwd = $self->{pwd};
 

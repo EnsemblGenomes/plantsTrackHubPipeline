@@ -98,11 +98,29 @@ $registry_obj->register_track_hub("SRP045759","ftp://ftp.ensemblgenomes.org/pub/
    $registry_obj->give_all_Registered_track_hub_names();
  };
 
+
+#test12
 ok($hash_ref->{"SRP045759"},"Successfully returns the name of the 1 track hub");
 
 # -----
 # test get_Registry_hub_last_update method
 # -----
+
+#test13
+my ($stdout7, $stderr7, $exit7) = capture {
+   $registry_obj->get_Registry_hub_last_update();
+};
+
+ok($exit7==0,"Successfully exited the method since no parameter was given (track hub name)");
+
+
+#test14
+
+my ($stdout8, $stderr8, $date) = capture {
+   $registry_obj->get_Registry_hub_last_update("SRP045759");
+};
+
+
 
 # -----
 # test give_all_bioreps_of_study_from_Registry method
