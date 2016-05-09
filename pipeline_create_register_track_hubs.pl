@@ -52,7 +52,7 @@ my $start_run = time();
       or die "I cannot make dir $server_dir_full_path in script: ".__FILE__." line: ".__LINE__."\n";
   }
 
-  my ($studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref, $skipped_studies_due_to_missing_samples_in_AE_API_aref) = ([] , [] , []);
+  my ($studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref, $skipped_studies_due_to_missing_samples_in_AE_API_aref , $skipped_studies_due_to_missing_sample_metadata_in_ENA_aref) = ([] , [] , [] ,[]);
 
   my $plant_names_AE_response_href = ArrayExpress::get_plant_names_AE_API();
 
@@ -67,13 +67,13 @@ my $start_run = time();
   
   if ($from_scratch){
 
-    ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref) = run_pipeline_from_scratch_with_logging($registry_obj, $study_ids_href_AE , $server_dir_full_path, $organism_assmblAccession_EG_href, $plant_names_AE_response_href ,$studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref, $skipped_studies_due_to_missing_samples_in_AE_API_aref,); 
+    ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref) = run_pipeline_from_scratch_with_logging($registry_obj, $study_ids_href_AE , $server_dir_full_path, $organism_assmblAccession_EG_href, $plant_names_AE_response_href ,$studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref, $skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref); 
 
   }
   else {  # incremental update
 
-    print_registered_TH_in_THR_stats_before_update_pipeline_is_run($registry_obj,$plant_names_AE_response_href);
-    ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref) = run_pipeline_with_incremental_update_with_logging($study_ids_href_AE,$registry_obj,$server_dir_full_path,$plant_names_AE_response_href ,$organism_assmblAccession_EG_href , $studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref, $skipped_studies_due_to_missing_samples_in_AE_API_aref);
+    print_registered_TH_in_THR_stats($registry_obj,$plant_names_AE_response_href);
+    ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref) = run_pipeline_with_incremental_update_with_logging($study_ids_href_AE,$registry_obj,$server_dir_full_path,$plant_names_AE_response_href ,$organism_assmblAccession_EG_href , $studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref, $skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref);
   }
 
   print_run_duration_so_far($start_time);
@@ -84,7 +84,7 @@ my $start_run = time();
 
   print_current_AE_studies_stats($study_id_biorep_ids_AE_currently_href ,$plant_study_id_AE_currently_number_of_bioreps_href , $server_dir_full_path);
 
-  print_registered_TH_in_THR_stats_after_pipeline_is_run($registry_obj,$studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref ,$plant_names_AE_response_href,$skipped_studies_due_to_missing_samples_in_AE_API_aref);
+  print_registered_TH_in_THR_stats_after_pipeline_is_run($registry_obj,$studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref ,$plant_names_AE_response_href,$skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref);
   print_run_duration_so_far($start_time);
   
   my $date_string_end = localtime();
@@ -96,7 +96,7 @@ my $start_run = time();
 
 ##METHODS##
 
-sub print_registered_TH_in_THR_stats_before_update_pipeline_is_run{
+sub print_registered_TH_in_THR_stats{
 
   my $registry_obj = shift;
   my $plant_names_AE_response_href  = shift ;
@@ -128,6 +128,7 @@ sub run_pipeline_with_incremental_update_with_logging{
   my $studies_not_yet_in_ena_aref = shift;
   my $skipped_studies_due_to_registry_issues_aref = shift;
   my $skipped_studies_due_to_missing_samples_in_AE_API_aref = shift;
+  my $skipped_studies_due_to_missing_sample_metadata_in_ENA_aref = shift;
 
   my $registered_track_hubs_href = $registry_obj->give_all_Registered_track_hub_names; # track hubs that are already registered
 
@@ -145,11 +146,11 @@ sub run_pipeline_with_incremental_update_with_logging{
     print "\nNew studies (".scalar (@$new_study_ids_aref) ." studies) from last time the pipeline was run:\n\n";
   }
 
-  ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref)= create_new_studies_in_incremental_update($new_study_ids_aref,$server_dir_full_path ,$plant_names_AE_response_href,$registry_obj,$organism_assmblAccession_EG_href , $studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref, $skipped_studies_due_to_missing_samples_in_AE_API_aref); 
+  ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref)= create_new_studies_in_incremental_update($new_study_ids_aref,$server_dir_full_path ,$plant_names_AE_response_href,$registry_obj,$organism_assmblAccession_EG_href , $studies_not_yet_in_ena_aref, $skipped_studies_due_to_registry_issues_aref, $skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref); 
 
-  ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref)= update_common_studies($common_study_ids_aref,$registry_obj,$plant_names_AE_response_href,$server_dir_full_path ,$organism_assmblAccession_EG_href,$studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref);
+  ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref)= update_common_studies($common_study_ids_aref,$registry_obj,$plant_names_AE_response_href,$server_dir_full_path ,$organism_assmblAccession_EG_href,$studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref);
 
-  return ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref); 
+  return ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref); 
 }
 
 
@@ -164,6 +165,7 @@ sub update_common_studies{
   my $studies_not_yet_in_ena_aref = shift ;
   my $skipped_studies_due_to_registry_issues_aref = shift;
   my $skipped_studies_due_to_missing_samples_in_AE_API_aref = shift;
+  my $skipped_studies_due_to_missing_sample_metadata_in_ENA_aref = shift;
 
   my %common_studies_to_be_updated = %{get_study_ids_to_be_updated($common_study_ids_aref, $registry_obj,$plant_names_AE_response_href)}; #hash looks like: $common_study_ids_to_be_updated {$common_study_id}=\@holder_of_reason_of_update;
 
@@ -244,8 +246,16 @@ sub update_common_studies{
         push(@$skipped_studies_due_to_registry_issues_aref,$study_id);
       }
     }
+
+    if ($unsuccessfull_study_href->{"sample metadata not yet in ENA"}){  # hash is like this:  $unsuccessful_study{"sample metadata not yet in ENA"}{$study_id}= 1;
+
+      foreach my $study_id (keys %{$unsuccessfull_study_href->{"sample metadata not yet in ENA"}}){
+        push(@$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref,$study_id);
+      }
+    }
+
   }
-  return ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref); 
+  return ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref); 
 
 }
 
@@ -260,6 +270,7 @@ sub create_new_studies_in_incremental_update{
   my $studies_not_yet_in_ena_aref = shift ;
   my $skipped_studies_due_to_registry_issues_aref =shift;
   my $skipped_studies_due_to_missing_samples_in_AE_API_aref = shift;
+  my $skipped_studies_due_to_missing_sample_metadata_in_ENA_aref = shift;
 
   my $study_counter = 0;
 
@@ -303,8 +314,16 @@ sub create_new_studies_in_incremental_update{
         push(@$skipped_studies_due_to_registry_issues_aref,$study_id);
       }
     }
+
+    if ($unsuccessfull_study_href->{"sample metadata not yet in ENA"}){  # hash is like this:  $unsuccessful_study{"sample metadata not yet in ENA"}{$study_id}= 1;
+
+      foreach my $study_id (keys %{$unsuccessfull_study_href->{"sample metadata not yet in ENA"}}){
+        push(@$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref,$study_id);
+      }
+    }
+
   }  
-  return ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref); 
+  return ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref,$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref); 
 
 }
 
@@ -497,19 +516,23 @@ sub print_registered_TH_in_THR_stats_after_pipeline_is_run{
   my $skipped_studies_due_to_registry_issues_aref = shift;
   my $plant_names_AE_response_href  = shift ;
   my $skipped_studies_due_to_missing_samples_in_AE_API_aref = shift;
+  my $skipped_studies_due_to_missing_sample_metadata_in_ENA_aref = shift;
 
-  my $all_track_hubs_in_registry_after_update_href = $registry_obj->give_all_Registered_track_hub_names();
-  my %distinct_bioreps;
 
-  foreach my $hub_name (keys %{$all_track_hubs_in_registry_after_update_href}){
-  
-    my $study_obj = AEStudy->new($hub_name,$plant_names_AE_response_href );
-    my %bioreps_hash = %{$study_obj->get_biorep_ids};
-    map { $distinct_bioreps{$_}++ } keys %bioreps_hash;
-  }
+  print_registered_TH_in_THR_stats($registry_obj,$plant_names_AE_response_href);
+# 
+#   my $all_track_hubs_in_registry_after_update_href = $registry_obj->give_all_Registered_track_hub_names();
+#   my %distinct_bioreps;
 
-  print "There are in total ". scalar (keys %{$all_track_hubs_in_registry_after_update_href});
-  print " track hubs with total ".scalar (keys %distinct_bioreps)." bioreps registered in the Track Hub Registry\n\n";
+#   foreach my $hub_name (keys %{$all_track_hubs_in_registry_after_update_href}){
+#   
+#     my $study_obj = AEStudy->new($hub_name,$plant_names_AE_response_href );
+#     my %bioreps_hash = %{$study_obj->get_biorep_ids};
+#     map { $distinct_bioreps{$_}++ } keys %bioreps_hash;
+#   }
+# 
+#   print "There are in total ". scalar (keys %{$all_track_hubs_in_registry_after_update_href});
+#   print " track hubs with total ".scalar (keys %distinct_bioreps)." bioreps registered in the Track Hub Registry\n\n";
 
 
   if (scalar @$studies_not_yet_in_ena_aref > 0){
@@ -546,6 +569,18 @@ sub print_registered_TH_in_THR_stats_after_pipeline_is_run{
       print $count_skipped_studies.".".$study_id." (".scalar (keys %bioreps_hash)." bioreps)\n";
     }
   }
+
+  if (scalar @$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref> 0){
+    print "\nThese studies had at least 1 sample with no ENA warehouse metadata , hence skipped (removed from the ftp server too): ".scalar @$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref ." in total\n\n";
+    my $count_skipped_studies=0;
+    foreach my $study_id (@$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref){
+      $count_skipped_studies++;
+      my $study_obj = AEStudy->new($study_id,$plant_names_AE_response_href);
+      my %bioreps_hash = %{$study_obj->get_biorep_ids};
+      print $count_skipped_studies.".".$study_id." (".scalar (keys %bioreps_hash)." bioreps)\n";
+    }
+  }
+
 }
 
 sub delete_registered_th_and_remove_th_from_server{  # called only when option is run pipeline from scratch
@@ -602,6 +637,7 @@ sub run_pipeline_from_scratch_with_logging{
   my $studies_not_yet_in_ena_aref =shift;
   my $skipped_studies_due_to_registry_issues_aref=shift;
   my $skipped_studies_due_to_missing_samples_in_AE_API_aref = shift;
+  my $skipped_studies_due_to_missing_sample_metadata_in_ENA_aref = shift;
 
   delete_registered_th_and_remove_th_from_server($registry_obj,$server_dir_full_path);
  
@@ -636,6 +672,12 @@ sub run_pipeline_from_scratch_with_logging{
         push(@$skipped_studies_due_to_registry_issues_aref,$study_id);
       }
     }
+
+    if ($unsuccessfull_study_href->{"sample metadata not yet in ENA"}){  # hash is like this:  $unsuccessful_study{"sample metadata not yet in ENA"}{$study_id}= 1;
+      foreach my $study_id (keys %{$unsuccessfull_study_href->{"sample metadata not yet in ENA"}}){
+        push(@$skipped_studies_due_to_missing_sample_metadata_in_ENA_aref,$study_id);
+      }
+    }
   }
 
   my $date_string2 = localtime();
@@ -644,7 +686,7 @@ sub run_pipeline_from_scratch_with_logging{
 
   print "\n***********************************\n";
   $| = 1; 
-  return ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref); 
+  return ($studies_not_yet_in_ena_aref,$skipped_studies_due_to_registry_issues_aref,$skipped_studies_due_to_missing_samples_in_AE_API_aref , $skipped_studies_due_to_missing_sample_metadata_in_ENA_aref); 
 }
 
 sub give_hashes_with_AE_current_stats{
@@ -797,8 +839,15 @@ sub make_and_register_track_hub{
       or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
 
     $line_counter --;
-    $unsuccessful_study{"not yet in ENA"} {$study_id}= 1;
 
+    if ($script_output=~/No ENA Warehouse metadata found/){
+
+      $unsuccessful_study{"sample metadata not yet in ENA"} {$study_id}= 1;
+
+    }else{
+
+      $unsuccessful_study{"not yet in ENA"} {$study_id}= 1;
+    }
   }else{  # if the study is successfully created in the ftp server, I go ahead and register it
 
     my $output = register_track_hub_in_TH_registry($registry_obj,$study_obj,$organism_assmblAccession_EG_href );  
