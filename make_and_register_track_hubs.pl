@@ -2,7 +2,7 @@
 # perl make_and_register_track_hubs.pl -THR_username testing -THR_password testing -server_dir_full_path /nfs/ensemblgenomes/ftp/pub/misc_data/Track_Hubs -server_url ftp://ftp.ensemblgenomes.org/pub/misc_data/Track_Hubs -file_location_of_study_ids_or_species ./file_with_ids -file_content_study_ids
 
 # or 
-# perl make_and_register_track_hubs.pl -THR_username testing -THR_password testing -server_dir_full_path /nfs/ensemblgenomes/ftp/pub/misc_data/Track_Hubs-server_url ftp://ftp.ensemblgenomes.org/pub/misc_data/Track_Hubs -file_location_of_study_ids_or_species ./file_with_ids -file_content_species_names
+# perl make_and_register_track_hubs.pl -THR_username testing -THR_password testing -server_dir_full_path /nfs/ensemblgenomes/ftp/pub/misc_data/Track_Hubs -server_url ftp://ftp.ensemblgenomes.org/pub/misc_data/Track_Hubs -file_location_of_study_ids_or_species ./file_with_ids -file_content_species_names
 
 use strict ;
 use warnings;
@@ -25,8 +25,8 @@ my $study_ids_file_content;
 my $start_time = time();
 
 GetOptions(
-  "THR_username=s" => \$registry_user_name ,  # testing
-  "THR_password=s" => \$registry_pwd, # testing
+  "THR_username=s" => \$registry_user_name ,  
+  "THR_password=s" => \$registry_pwd, 
   "server_dir_full_path=s" => \$server_dir_full_path,
   "server_url=s" => \$server_url,  
   "file_location_of_study_ids_or_species=s" => \$file_location_of_study_ids_or_species,
@@ -170,8 +170,6 @@ sub make_register_THs_with_logging{
 
   foreach my $study_id (keys %$study_ids_href){
 
-    print $registry_obj->delete_track_hub($study_id) ; ## ONLY FOR NOW
-
     my $study_obj = AEStudy->new($study_id,$plant_names_AE_response_href);
 
     my $sample_ids_href = $study_obj->get_sample_ids();
@@ -184,9 +182,11 @@ sub make_register_THs_with_logging{
     print "$line_counter.\tcreating track hub in the server for study $study_id\t"; 
 
     my $ls_output = `ls $server_dir_full_path`  ;
+    my $flag_new_or_update;
     if($ls_output =~/$study_id/){ # i check if the directory of the study exists already
    
       print " (update) "; # if it already exists
+      $flag_new_or_update = "update";
       my $method_return= Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
       if (!$method_return){ # returns 1 if successfully deleted or 0 if not, !($method_return is like $method_return=0)
         print STDERR "I cannot rm dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
@@ -202,18 +202,28 @@ sub make_register_THs_with_logging{
 
     print $script_output;
 
-    my %unsuccessful_study;
 
     if($script_output !~ /..Done/){  # if for some reason the track hub didn't manage to be made in the server, it shouldn't be registered in the Registry, for example Robert gives me a study id as completed that is not yet in ENA
 
       print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id will be deleted\n\n" ;
       print "\t..Skipping registration part\n";
+      if ($flag_new_or_update eq "update"){ # if the track hub is already registered but in the process of re-creating it smt went wrong with its creation so I removed it from the server, I have to rm it from the THR too
+        $registry_obj->delete_track_hub($study_id);
+      }
 
       Helper::run_system_command("rm -r $server_dir_full_path/$study_id")      
         or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
 
       $line_counter --;
-      $unsuccessful_studies{"not yet in ENA"} {$study_id}= 1;
+
+      if ($script_output=~/No ENA Warehouse metadata found/){
+
+        $unsuccessful_studies{"sample metadata not yet in ENA"} {$study_id}= 1;
+
+      }else{
+
+        $unsuccessful_studies{"not yet in ENA"} {$study_id}= 1;
+      }
 
      }
      else{  # if the study is successfully created in the ftp server, I go ahead and register it
@@ -223,8 +233,8 @@ sub make_register_THs_with_logging{
       $return_string = $output;
 
       if($output !~ /is Registered/){# if something went wrong with the registration, i will not make a track hub out of this study
-        Helper::run_system_command("rm -r $server_dir_full_path/$study_id")
-          or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
+        #Helper::run_system_command("rm -r $server_dir_full_path/$study_id")
+         # or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
 
         $line_counter --;
         $return_string = $return_string . "\t..Something went wrong with the Registration process -- this study will be skipped..\n";
