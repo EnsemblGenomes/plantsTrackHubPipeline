@@ -66,7 +66,7 @@ sub register_track_hub{
   my $request = 
     POST($url,'Content-type' => 'application/json',
 	 #  assemblies => { "$assembly_name" => "$assembly_accession" } }));
-    'Content' => to_json({ url => $trackHub_txt_file_url, type => 'transcriptomics', assemblies => $assemblies , public => 0 }));
+    'Content' => to_json({ url => $trackHub_txt_file_url, type => 'transcriptomics', assemblies => $assemblies }));#, public => 0 }));
   $request->headers->header(user => $username);
   $request->headers->header(auth_token => $auth_token);
 
@@ -324,6 +324,8 @@ sub give_all_bioreps_of_study_from_Registry {
   
   my $auth_token = $self->{auth_token};
 
+  #my $url = "$server/api/trackhub/$name";
+  #my $request = registry_get_request( $url,$registry_user_name, $auth_token);
   my $request = GET("$server/api/trackhub/$name");
   $request->headers->header(user       => $registry_user_name);
   $request->headers->header(auth_token => $auth_token);
@@ -365,8 +367,8 @@ sub give_all_bioreps_of_study_from_Registry {
     $request = GET($trackdb->{uri});
     $request->headers->header(user       => $registry_user_name);
     $request->headers->header(auth_token => $auth_token);
-
-    # my $request = registry_get_request();
+    #my $endpoint = $trackdb->{uri};
+    #$request = registry_get_request($endpoint ,$registry_user_name, $auth_token);
     $response = $ua->request($request);
     my $doc;
 
@@ -392,12 +394,12 @@ sub give_all_bioreps_of_study_from_Registry {
 sub registry_get_request {
 
   my $self = shift;
-  my ($server, $endpoint, $user, $token) = @_;
+  my ($endpoint, $user, $token) = @_;
 
-  defined $server and defined $endpoint and defined $user and defined $token
-    or die "Some required parameters are missing when trying to log out from the Track Hub Registry\n";
+  defined $endpoint and defined $user and defined $token
+    or die "Some required parameters are missing when trying to get registry request from the Track Hub Registry\n";
 
-  my $request = GET("$server$endpoint");
+  my $request = GET("$endpoint");
   $request->headers->header(user       => $user);
   $request->headers->header(auth_token => $token);
   

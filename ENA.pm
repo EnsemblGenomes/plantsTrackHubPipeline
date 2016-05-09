@@ -38,7 +38,7 @@ sub get_ENA_study_title{
 
   if(!$nodes[0]){
     print STDERR "I could not get a node from the xml doc of STUDY_TITLE for study id $study_id\n";
-    return "Study title was not find in ENA";
+    return "Study title was not found in ENA";
   }
   $study_title = $nodes[0]->firstChild->data; #it's always 1 node
   utf8::encode($study_title);

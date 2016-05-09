@@ -56,6 +56,9 @@ sub make_track_hub{ # main method, creates the track hub of a study in the folde
   my %assembly_names = %{$study_obj->get_assembly_names}; 
 
   foreach my $assembly_name (keys %assembly_names){
+    if (!make_trackDbtxt_file($self,$server_dir_full_path, $study_obj, $assembly_name)) { # method returns 0 when there is no ENA warehouse metadata
+      return ".. No ENA Warehouse metadata found for at least 1 of the sample ids\n";
+    }
     make_trackDbtxt_file($self,$server_dir_full_path, $study_obj, $assembly_name);
   }
 
@@ -120,7 +123,7 @@ sub make_hubtxt_file{
   }
   my $long_label;
 
-  if ($ena_study_title eq "Study title was not find in ENA") { 
+  if ($ena_study_title eq "Study title was not found in ENA") { 
 
     print STDERR "I cannot get study title for $study_id from ENA\n";
     $long_label = "longLabel <a href=\"http://www.ebi.ac.uk/ena/data/view/".$study_id."\">".$study_id."</a>"."\n";
@@ -178,9 +181,12 @@ sub make_trackDbtxt_file{
   }
 
   my $counter_of_tracks=0;
-  
+
   foreach my $sample_id ( @sample_ids ) { 
 
+    if(!($self->make_biosample_super_track_obj($sample_id))) {  # method returns 0 when there is no ENA warehouse sample metadata
+      return 0;
+    }
     my $super_track_obj = $self->make_biosample_super_track_obj($sample_id);
     $super_track_obj->print_track_stanza($fh);
 
@@ -202,6 +208,7 @@ sub make_trackDbtxt_file{
 
     } 
   }
+  return 1;
 } 
 
 
@@ -244,6 +251,7 @@ sub get_ENA_biorep_title{
 
   if(scalar @run_ids > 1){ # then it is a clustered biorep
     foreach my $run_id (@run_ids){
+
       $run_titles{ENA::get_ENA_title($run_id)} =1;  # I get all distinct run titles
     }
     my @distinct_run_titles = keys (%run_titles);
@@ -274,12 +282,14 @@ sub make_biosample_super_track_obj{
   }
 
   my $date_string = strftime "%a %b %e %H:%M:%S %Y %Z", gmtime;  # date is of this type: "Tue Feb  2 17:57:14 2016 GMT"
-  my $metadata_string="hub_created_date=".printlabel_value($date_string);
+  my $metadata_string="hub_created_date=".printlabel_value($date_string)." biosample_id=".$sample_id;
     
   # returns a has ref or 0 if unsuccessful
   my $metadata_respose = ENA::get_sample_metadata_response_from_ENA_warehouse_rest_call( $sample_id,$meta_keys_aref);  
   if ($metadata_respose==0){
+  
     print STDERR "No metadata values found in ENA warehouse for sample $sample_id\n";
+    return 0;
 
   }else{  # if there is metadata
     my %metadata_pairs = %{$metadata_respose};
