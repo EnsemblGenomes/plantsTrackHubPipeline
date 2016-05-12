@@ -336,13 +336,13 @@ sub make_biosample_sub_track_obj{
 
     if(!$ena_title){ # if return is 0
        print STDERR "Biorep id $biorep_id of study id $study_id was not found to have a title in ENA\n\n";
-       $long_label_ENA = "<a href=\"http://www.ebi.ac.uk/ena/data/view/".$biorep_id."\">".$biorep_id."</a>\n" ;
+       $long_label_ENA = "<a href=\"http://www.ebi.ac.uk/ena/data/view/".$biorep_id."\">".$biorep_id."</a> ;
 
     }elsif($ena_title eq "not yet in ENA"){
        print STDERR "Biorep id $biorep_id of study id $study_id is not yet in ENA, this track will not be written in the trackDb.txt file of the TH\n\n";
        return 0;
     }else{
-       $long_label_ENA = $ena_title." ; <a href=\"http://www.ebi.ac.uk/ena/data/view/".$biorep_id."\">".$biorep_id."</a>"."\n" ;
+       $long_label_ENA = $ena_title." ; <a href=\"http://www.ebi.ac.uk/ena/data/view/".$biorep_id."\">".$biorep_id."</a>" ;
     }
 
   }else{ # run id would be "E-MTAB-2037.biorep4"     
@@ -356,10 +356,10 @@ sub make_biosample_sub_track_obj{
     if(!$ena_title){
       print STDERR "first run of biorep id $biorep_id of study id $study_id was not found to have a title in ENA\n\n";
       # i want the link to be like: http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/E-GEOD-55482.bioreps.txt      
-      $long_label_ENA = "<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$1.".bioreps.txt"."\">".$biorep_id."</a>\n" ;
+      $long_label_ENA = "<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$1.".bioreps.txt"."\">".$biorep_id."</a> ;
 
      }else{ 
-        $long_label_ENA = $ena_title.";<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$biorep_accession.".bioreps.txt"."\">".$biorep_id."</a>"."\n" ;
+        $long_label_ENA = $ena_title.";<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$biorep_accession.".bioreps.txt"."\">".$biorep_id."</a>";
       }
   }
 

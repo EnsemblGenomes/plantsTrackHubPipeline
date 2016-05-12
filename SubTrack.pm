@@ -17,6 +17,10 @@ sub new {
   my $type = shift;
   my $visibility = shift;
 
+
+  defined $track_name and $parent_name and $big_data_url and $short_label and $long_label and $type and $visibility
+    or die "Some required parameters are missing in the constructor of the SuperTrack\n";
+
   my $self = {
     track_name => $track_name,
     parent_name => $parent_name,
@@ -45,7 +49,7 @@ sub print_track_stanza{
   print $fh "	parent ". $self->{parent_name}."\n"; 
   print $fh "	bigDataUrl ".$self->{big_data_url}."\n"; 
   print $fh "	shortLabel ".$self->{short_label}."\n";
-  print $fh "	longLabel ".$self->{long_label};
+  print $fh "	longLabel ".$self->{long_label}."\n";
   print $fh "	type ".$self->{file_type}."\n";
   if($self->{visibility} eq "on"){
     print $fh "	visibility pack\n";

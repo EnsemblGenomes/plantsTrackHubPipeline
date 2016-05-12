@@ -3,7 +3,6 @@ package SuperTrack;
 use strict;
 use warnings;
 
-
 ## this is a class of all the sub-track data of a sub-track stanza in the trackDb.txt file
 
 sub new {
@@ -12,6 +11,9 @@ sub new {
   my $track_name = shift;
   my $long_label = shift;
   my $metadata = shift;
+
+  defined $track_name and $long_label and $metadata
+    or die "Some required parameters are missing in the constructor of the SuperTrack\n";
 
   my $self = {
     track_name => $track_name,
@@ -35,13 +37,11 @@ sub print_track_stanza{
   my $fh = shift;
 
   print $fh "track ". $self->{track_name}."\n"; 
-  print $fh "superTrack on\n";
+  print $fh "superTrack on show\n";
   print $fh "shortLabel BioSample:".$self->{track_name}."\n";
   print $fh "longLabel ".$self->{long_label}."\n";
   print $fh "metadata ".$self->{metadata}."\n";
   print $fh "type cram\n";
-
-
   print $fh "\n";
 
 }

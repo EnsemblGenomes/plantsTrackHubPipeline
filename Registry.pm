@@ -3,8 +3,6 @@ package Registry;
 use strict;
 use warnings;
 
-# in this cript I connect to the trackHub Registry db and I delete the given study_id under the given track hub Registry account
-
 use JSON;
 use HTTP::Request::Common qw/GET DELETE POST/;
 use LWP::UserAgent;
@@ -18,13 +16,15 @@ sub new {
   my $class = shift;
   my $username  = shift;
   my $password = shift;
+  my $visibility = shift; # in the THR I can register track hubs but being not publicly available. This is useful for testing. I can only see the track hubs with visibility "hidden" in my THR account, they are not seen by anyone else
   
   defined $username and $password
     or die "Some required parameters are missing in the constructor in order to construct a Registry object\n";
 
   my $self = {
     username  => $username ,
-    pwd => $password
+    pwd => $password,
+    visibility => $visibility
   };
 
   my $auth_token = eval {registry_login($username, $password) };
@@ -51,7 +51,6 @@ sub register_track_hub{
   my $return_string;
 
   my $username = $self->{username};
-  my $password = $self->{pwd};
   my $auth_token = $self->{auth_token};
 
   my $url = $server . '/api/trackhub';
@@ -63,10 +62,19 @@ sub register_track_hub{
     $assemblies->{$words[$i]} = $words[$i+1];
   }
 
-  my $request = 
-    POST($url,'Content-type' => 'application/json',
+  my $request ;
+
+  if($self->{visibility} eq "public"){
+
+    $request = POST($url,'Content-type' => 'application/json',
 	 #  assemblies => { "$assembly_name" => "$assembly_accession" } }));
-    'Content' => to_json({ url => $trackHub_txt_file_url, type => 'transcriptomics', assemblies => $assemblies }));#, public => 0 }));
+    'Content' => to_json({ url => $trackHub_txt_file_url, type => 'transcriptomics', assemblies => $assemblies }));
+
+  }else{  # hidden
+    $request = POST($url,'Content-type' => 'application/json',
+	 #  assemblies => { "$assembly_name" => "$assembly_accession" } }));
+    'Content' => to_json({ url => $trackHub_txt_file_url, type => 'transcriptomics', assemblies => $assemblies , public => 0 }));
+  }
   $request->headers->header(user => $username);
   $request->headers->header(auth_token => $auth_token);
 
@@ -188,11 +196,9 @@ sub give_all_Registered_track_hub_names{
   my $self = shift;
 
   my $registry_user_name= $self->{username};
-  my $registry_pwd = $self->{pwd};
   my %track_hub_names;
 
   my $auth_token = eval { $self->{auth_token} };
- # my $auth_token = $self->{auth_token};#eval { registry_login($registry_user_name, $registry_pwd) };
 
   my $request = GET("$server/api/trackhub");
   $request->headers->header(user => $registry_user_name);
@@ -228,8 +234,6 @@ sub give_all_Registered_track_hub_names{
     unless $flag_success ==1;
   }
 
-  #registry_logout($server, $registry_user_name, $auth_token);
-
   return \%track_hub_names;
 
 }
@@ -243,7 +247,6 @@ sub get_Registry_hub_last_update { # gives the last update date(unix time) of th
     or print "Track hub name parameter required to get the track hub's last update date in the Track Hub Registry\n" and return 0;
 
   my $registry_user_name= $self->{username};
-  my $registry_pwd = $self->{pwd};
 
   my $auth_token = $self->{auth_token};
  
@@ -306,8 +309,6 @@ sub get_Registry_hub_last_update { # gives the last update date(unix time) of th
 
   die "Couldn't get date as expected: $last_update\n" unless $last_update =~ /^[1-9]\d+?$/;
 
-  #registry_logout($server, $registry_user_name, $auth_token);
-
   return $last_update;
 }
 
@@ -320,12 +321,9 @@ sub give_all_bioreps_of_study_from_Registry {
     or print "Track hub name parameter required to get the track hub's bioreps from the Track Hub Registry\n" and return 0;
 
   my $registry_user_name= $self->{username};
-  my $registry_pwd = $self->{pwd};
   
   my $auth_token = $self->{auth_token};
 
-  #my $url = "$server/api/trackhub/$name";
-  #my $request = registry_get_request( $url,$registry_user_name, $auth_token);
   my $request = GET("$server/api/trackhub/$name");
   $request->headers->header(user       => $registry_user_name);
   $request->headers->header(auth_token => $auth_token);
@@ -367,8 +365,6 @@ sub give_all_bioreps_of_study_from_Registry {
     $request = GET($trackdb->{uri});
     $request->headers->header(user       => $registry_user_name);
     $request->headers->header(auth_token => $auth_token);
-    #my $endpoint = $trackdb->{uri};
-    #$request = registry_get_request($endpoint ,$registry_user_name, $auth_token);
     $response = $ua->request($request);
     my $doc;
 
@@ -385,45 +381,12 @@ sub give_all_bioreps_of_study_from_Registry {
     }
   }
 
-  #registry_logout($server, $registry_user_name, $auth_token);
 
   return \%runs;
 
 }
 
-sub registry_get_request {
 
-  my $self = shift;
-  my ($endpoint, $user, $token) = @_;
-
-  defined $endpoint and defined $user and defined $token
-    or die "Some required parameters are missing when trying to get registry request from the Track Hub Registry\n";
-
-  my $request = GET("$endpoint");
-  $request->headers->header(user       => $user);
-  $request->headers->header(auth_token => $token);
-  
-  return $request;
-}
-
-sub registry_logout {
-
-  my $self = shift;
-  my ($server, $user, $auth_token) = @_;
-
-  defined $server and defined $user and defined $auth_token
-    or die "Some required parameters are missing when trying to log out from the Track Hub Registry\n";
-
-  my $request = GET("$server/api/logout");
-  $request->headers->header(user => $user);
-  $request->headers->header(auth_token => $auth_token);
-  my $response = $ua->request($request);
-
-  if (!$response->is_success) {
-    die "Couldn't log out from the registry\n";
-  } 
-  return;
-}
 
 
 1;
