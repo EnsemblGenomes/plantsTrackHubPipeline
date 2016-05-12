@@ -5,7 +5,6 @@ use warnings;
 
 use Getopt::Long; # to use the options when calling the script
 use POSIX qw(strftime); # to get GMT time stamp
-use TransformDate;
 use ENA;
 use EG;
 use AEStudy;
@@ -13,7 +12,7 @@ use SubTrack;
 use SuperTrack;
 use Helper;
 
-my $meta_keys_aref = ENA::get_all_sample_keys();
+my $meta_keys_aref = ENA::get_all_sample_keys(); # array ref that has all the keys for the ENA warehouse metadata
 
 sub new {
 
@@ -42,24 +41,24 @@ sub make_track_hub{ # main method, creates the track hub of a study in the folde
 
   my $study_obj = AEStudy->new($study_id,$plant_names_response_href);
 
-  make_study_dir($server_dir_full_path, $study_obj);
+  $self->make_study_dir($server_dir_full_path, $study_obj);
 
-  make_assemblies_dirs($server_dir_full_path, $study_obj) ;  
+  $self->make_assemblies_dirs($server_dir_full_path, $study_obj) ;  
   
-  my $return = make_hubtxt_file($server_dir_full_path , $study_obj);
+  my $return = $self->make_hubtxt_file($server_dir_full_path , $study_obj);
 
   if($return eq "not yet in ENA"){
     return "..Study $study_id is not yet in ENA\n";
   }
-  make_genomestxt_file($server_dir_full_path , $study_obj);  
+  $self->make_genomestxt_file($server_dir_full_path , $study_obj);  
 
   my %assembly_names = %{$study_obj->get_assembly_names}; 
 
   foreach my $assembly_name (keys %assembly_names){
-    if (!make_trackDbtxt_file($self,$server_dir_full_path, $study_obj, $assembly_name)) { # method returns 0 when there is no ENA warehouse metadata
+    if (!$self->make_trackDbtxt_file($server_dir_full_path, $study_obj, $assembly_name)) { # method returns 0 when there is no ENA warehouse metadata
       return ".. No ENA Warehouse metadata found for at least 1 of the sample ids\n";
     }
-    make_trackDbtxt_file($self,$server_dir_full_path, $study_obj, $assembly_name);
+    $self->make_trackDbtxt_file($server_dir_full_path, $study_obj, $assembly_name);
   }
 
   return "..Done\n";
@@ -81,6 +80,7 @@ sub run_system_command {
 
 sub make_study_dir{
 
+  my $self= shift;
   my ($server_dir_full_path,$study_obj) = @_;
   my $study_id = $study_obj->id;  
 
@@ -90,6 +90,7 @@ sub make_study_dir{
 
 sub make_assemblies_dirs{
 
+  my $self= shift;
   my ($server_dir_full_path,$study_obj) = @_;
   my $study_id = $study_obj->id;
   
@@ -103,6 +104,7 @@ sub make_assemblies_dirs{
 
 sub make_hubtxt_file{
 
+  my $self= shift;
   my ($server_dir_full_path,$study_obj) = @_;
   my $study_id = $study_obj->id;
   my $hub_txt_file= "$server_dir_full_path/$study_id/hub.txt";
@@ -141,7 +143,8 @@ sub make_hubtxt_file{
 }
 
 sub make_genomestxt_file{
-  
+
+  my $self= shift;
   my ($server_dir_full_path,$study_obj) = @_;  
   my $assembly_names_href = $study_obj->get_assembly_names;
   my $study_id = $study_obj->id;
@@ -163,7 +166,8 @@ sub make_genomestxt_file{
 
 sub make_trackDbtxt_file{
 
-  my ($self, $ftp_dir_full_path, $study_obj , $assembly_name) = @_;
+  my $self =shift;
+  my ($ftp_dir_full_path, $study_obj , $assembly_name) = @_;
     
   my $study_id =$study_obj->id;
 
@@ -194,7 +198,7 @@ sub make_trackDbtxt_file{
 
     foreach my $biorep_id (keys %{$study_obj->get_biorep_ids_from_sample_id($sample_id)}){
     
-      if(!(make_biosample_sub_track_obj($study_obj,$biorep_id,$sample_id))){ # this is in case there is a run id from AE that is not yet in ENA, then I want to skip doing this track, this method returns 0 if this is the case
+      if(!($self->make_biosample_sub_track_obj($study_obj,$biorep_id,$sample_id))){ # this is in case there is a run id from AE that is not yet in ENA, then I want to skip doing this track, this method returns 0 if this is the case
         next;
       }
       $counter_of_tracks++;
@@ -203,7 +207,7 @@ sub make_trackDbtxt_file{
       }else{
         $visibility = "off";
       }
-      my $track_obj=make_biosample_sub_track_obj($study_obj,$biorep_id,$sample_id,$visibility);
+      my $track_obj=$self->make_biosample_sub_track_obj($study_obj,$biorep_id,$sample_id,$visibility);
       $track_obj->print_track_stanza($fh);
 
     } 
@@ -301,7 +305,6 @@ sub make_biosample_super_track_obj{
 
       # if the date of the metadata has the months in this format jun-Jun-June then I have to convert it to 06 as the Registry complains
       if($meta_key =~/date/ and $meta_value =~/[(a-z)|(A-Z)]/){ 
-        $meta_value = TransformDate->change_date($meta_value);
       }
       my $pair= printlabel_key($meta_key)."=".printlabel_value($meta_value);
       push (@meta_pairs, $pair);
@@ -315,7 +318,7 @@ sub make_biosample_super_track_obj{
 
 sub make_biosample_sub_track_obj{ 
 # i need 5 pieces of data to make the track obj, to return:  track_name, parent_name, big_data_url , long_label ,file_type
-
+  my $self= shift;
   my $study_obj = shift;
   my $biorep_id = shift; #track name
   my $parent_id = shift;
