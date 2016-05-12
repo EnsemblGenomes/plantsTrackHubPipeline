@@ -36,11 +36,22 @@ my %months = (
         "April" => "04",
         "June" => "06",
         "July" => "07",
-        "Aug" => "08",
+        "August" => "08",
         "September" => "09",
         "October" => "10",
         "November" => "11",
-        "December" => "12"
+        "December" => "12",
+        "january" => "01",
+        "february" => "02",
+        "march" => "03",
+        "april" => "04",
+        "june" => "06",
+        "july" => "07",
+        "august" => "08",
+        "september" => "09",
+        "october" => "10",
+        "november" => "11",
+        "december" => "12"
 );
 
 
@@ -49,10 +60,12 @@ sub change_date {
 
  my $date = shift;
 
- if($date =~/(jan|January|Jan|feb|Feb|February|mar|March|Mar|apr|Apr|April|may|May|jun|Jun|June|jul|Jul|July|aug|Aug|August|sept|Sept|September|oct|Oct|October|nov|Nov|November|dec|Dec|December)/){
+ if($date =~/(jan|January|Jan|january|feb|Feb|February|february|mar|March|Mar|march|apr|Apr|April|april|may|May|jun|Jun|June|june|jul|Jul|July|july|aug|Aug|August|august|sept|Sept|September|september|oct|Oct|October|october|nov|Nov|November|november|dec|Dec|December|december)?/){
    my $month = $1;
    my $correct_month = $months{$month};
    $date =~ s/$month/$correct_month/;
+ }else{
+   print STDERR "Did not get the expected month format in the date inside the ".__FILE__ ." module, I got $date while I was expecting this type: Jul, July, july or jul\n";
  }
  return $date;
 
