@@ -198,7 +198,7 @@ sub make_trackDbtxt_file{
 
     foreach my $biorep_id (keys %{$study_obj->get_biorep_ids_from_sample_id($sample_id)}){
     
-      if(!($self->make_biosample_sub_track_obj($study_obj,$biorep_id,$sample_id))){ # this is in case there is a run id from AE that is not yet in ENA, then I want to skip doing this track, this method returns 0 if this is the case
+      if(!($self->make_biosample_sub_track_obj($study_obj,$biorep_id,$sample_id,$visibility))){ # this is in case there is a run id from AE that is not yet in ENA, then I want to skip doing this track, this method returns 0 if this is the case
         next;
       }
       $counter_of_tracks++;
@@ -304,7 +304,8 @@ sub make_biosample_super_track_obj{
       my $meta_value = $metadata_pairs{$meta_key} ;
 
       # if the date of the metadata has the months in this format jun-Jun-June then I have to convert it to 06 as the Registry complains
-      if($meta_key =~/date/ and $meta_value =~/[(a-z)|(A-Z)]/){ 
+      if($meta_key =~/date/ and $meta_value =~/[(a-z)|(A-Z)]/){
+        print STDERR "found date in metadata key:$meta_key value:$meta_value\n" ; ########################## THIS IS FOR DEBUGGING
       }
       my $pair= printlabel_key($meta_key)."=".printlabel_value($meta_value);
       push (@meta_pairs, $pair);
@@ -336,7 +337,7 @@ sub make_biosample_sub_track_obj{
 
     if(!$ena_title){ # if return is 0
        print STDERR "Biorep id $biorep_id of study id $study_id was not found to have a title in ENA\n\n";
-       $long_label_ENA = "<a href=\"http://www.ebi.ac.uk/ena/data/view/".$biorep_id."\">".$biorep_id."</a> ;
+       $long_label_ENA = "<a href=\"http://www.ebi.ac.uk/ena/data/view/".$biorep_id."\">".$biorep_id."</a>" ;
 
     }elsif($ena_title eq "not yet in ENA"){
        print STDERR "Biorep id $biorep_id of study id $study_id is not yet in ENA, this track will not be written in the trackDb.txt file of the TH\n\n";
@@ -356,7 +357,7 @@ sub make_biosample_sub_track_obj{
     if(!$ena_title){
       print STDERR "first run of biorep id $biorep_id of study id $study_id was not found to have a title in ENA\n\n";
       # i want the link to be like: http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/E-GEOD-55482.bioreps.txt      
-      $long_label_ENA = "<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$1.".bioreps.txt"."\">".$biorep_id."</a> ;
+      $long_label_ENA = "<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$1.".bioreps.txt"."\">".$biorep_id."</a>";
 
      }else{ 
         $long_label_ENA = $ena_title.";<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$biorep_accession.".bioreps.txt"."\">".$biorep_id."</a>";
@@ -364,7 +365,6 @@ sub make_biosample_sub_track_obj{
   }
 
   my $file_type =$study_obj->give_big_data_file_type_of_biorep_id($biorep_id);
-
   my $track_obj = SubTrack->new($biorep_id,$parent_id,$big_data_url,$short_label_ENA,$long_label_ENA,$file_type,$visibility);
   return $track_obj;
 

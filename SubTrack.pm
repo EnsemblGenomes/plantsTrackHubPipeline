@@ -19,7 +19,7 @@ sub new {
 
 
   defined $track_name and $parent_name and $big_data_url and $short_label and $long_label and $type and $visibility
-    or die "Some required parameters are missing in the constructor of the SuperTrack\n";
+    or die "Some required parameters are missing in the constructor of the SubTrack\n";
 
   my $self = {
     track_name => $track_name,

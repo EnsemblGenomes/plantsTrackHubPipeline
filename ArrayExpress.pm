@@ -75,9 +75,9 @@ sub get_completed_study_ids_for_plants{ # I want this method to return only stud
       }
     }
   }
-
   
   return \%study_ids;
+
 }
 
 sub get_study_ids_for_plant{

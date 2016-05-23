@@ -16,12 +16,15 @@ sub new {
   my $study_id = shift;
   my $plant_names_response_href = shift;
 
+  defined $study_id and $plant_names_response_href
+    or die "Some required parameters are missing in the constructor of the AEStudy\n";
+
   my $self = {
     study_id => $study_id,
     plant_names => $plant_names_response_href
   };
 
-  my $run_tuple_of_study_ref =  make_runs_tuple_plants_of_study($study_id,$plant_names_response_href);
+  my $run_tuple_of_study_ref =  make_runs_tuple_plants_of_study($self);
   $self->{run_tuple} = $run_tuple_of_study_ref;
 
   return bless $self, $class; #this is what makes a reference into an object
@@ -29,25 +32,15 @@ sub new {
 
 sub make_runs_tuple_plants_of_study {  
 
-  my $study_id = shift;
-  my $plant_names_response_href = shift; # ArrayExpress::get_plant_names_AE_API();
+  my $self = shift;
 
-  if(!$study_id ){
-    print "THERE IS NO STUDY ID WHEN CALLING THE METHOD make_runs_tuple_plants_of_study from AEStudy.pm\n";
-  }
+  my $study_id = $self->{study_id};
+  my $plant_names_response_href = $self->{plant_names}; # ArrayExpress::get_plant_names_AE_API();
+
   my %run_tuple; # to be returned
 
-  my %plant_names_AE;
-
-  if (!$plant_names_response_href){
-
-    die "Could not get plant names from AE REST call /getOrganisms/plants in AEStudy module\n";
-
-  }else{
-
-    %plant_names_AE = %{$plant_names_response_href};  # gives all distinct plant names with processed runs by AE
-  }
-
+  my %plant_names_AE = %{$plant_names_response_href};  # gives all distinct plant names with processed runs by AE
+  
   my $runs_response = ArrayExpress::get_runs_json_for_study($study_id);
   my @runs_json; # returns list of hash references
 
@@ -98,10 +91,11 @@ sub id{
   return $self->{study_id};
 }
 
-sub get_biorep_ids_by_organism{
+sub get_biorep_ids_by_organism{ # this method is used when there is a study with many assemblies (or organisms); I can get the biorep ids of a specific organism of the study
 
   my $self = shift;
   my $organism_name = shift;
+
   my $run_tuple = $self->{run_tuple};
   my %biorep_ids;
 
@@ -118,6 +112,7 @@ sub get_biorep_ids_by_organism{
 sub get_organism_names_assembly_names{
 
   my $self = shift;
+
   my $run_tuple = $self->{run_tuple};
   my %organism_names;
   my $organism_name;
@@ -136,6 +131,7 @@ sub get_organism_names_assembly_names{
 sub get_sample_ids{
 
   my $self = shift;
+
   my $run_tuple = $self->{run_tuple};
   my %sample_ids;
 
@@ -196,6 +192,7 @@ sub get_biorep_ids_from_sample_id{
 
   my $self=shift;
   my $sample_id = shift;
+
   my $run_tuple = $self->{run_tuple};
 
   my %biorep_ids;
@@ -238,8 +235,12 @@ sub get_big_data_file_location_from_biorep_id {
   my $self=shift;
   my $biorep_id = shift;
   my $run_tuple = $self->{run_tuple};
-    
-  return $run_tuple->{$biorep_id}{"big_data_file_server_location"};
+  
+  if(!$run_tuple->{$biorep_id}){
+    die "There is not such biorep id $biorep_id in study ".$self->{study_id}."\n";
+  }
+  
+  return $run_tuple->{$biorep_id}{"big_data_file_server_location"}; # returns a string
 
 }
 
@@ -248,6 +249,10 @@ sub get_AE_last_processed_date_from_biorep_id {
   my $self=shift;
   my $biorep_id = shift;
   my $run_tuple = $self->{run_tuple};
+
+  if(!$run_tuple->{$biorep_id}){
+    die "There is not such biorep id $biorep_id in study ".$self->{study_id}."\n";
+  }
     
   return $run_tuple->{$biorep_id}{"AE_processed_date"};
 
@@ -258,6 +263,10 @@ sub get_run_ids_of_biorep_id{  # could be more than 1 run id : "RUN_IDS":"DRR001
   my $self=shift;
   my $biorep_id = shift;
   my $run_tuple = $self->{run_tuple};
+
+  if(!$run_tuple->{$biorep_id}){
+    die "There is not such biorep id $biorep_id in study ".$self->{study_id}."\n";
+  }
 
   my $run_string = $run_tuple->{$biorep_id}{"run_ids"};
  
@@ -270,7 +279,12 @@ sub give_big_data_file_type_of_biorep_id{
 
   my $self=shift;
   my $biorep_id = shift;
- 
+  my $run_tuple = $self->{run_tuple};
+
+  if(!$run_tuple->{$biorep_id}){
+    die "There is not such biorep id $biorep_id in study ".$self->{study_id}."\n";
+  }
+
   my $server_location = $self->get_big_data_file_location_from_biorep_id($biorep_id);   #ftp://ftp.ebi.ac.uk/pub/databases/arrayexpress/data/atlas/rnaseq/DRR000/DRR000745/DRR000745.cram
   # or ftp://ftp.ebi.ac.uk/pub/databases/arrayexpress/data/atlas/rnaseq/aggregated_techreps/E-MTAB-2037/E-MTAB-2037.biorep4.cram
   $server_location =~ /.+\/.+\.(.+)$/;
@@ -282,12 +296,14 @@ sub give_big_data_file_type_of_biorep_id{
 sub get_AE_last_processed_unix_date{  # of the study : i get all its bioreps and then find the max date of all bioreps # tried with this study: http://www.ebi.ac.uk/fg/rnaseq/api/json/70/getRunsByStudy/SRP067728
 
   my $self= shift;
+
   my %biorep_ids = %{$self->get_biorep_ids};
+  my $run_tuple = $self->{run_tuple};
+
   my $max_date=0;
 
   foreach my $biorep_id (keys %biorep_ids){  
   #each study has more than 1 processed date, as there are usually multiple bioreps in each study with different processed date each. I want to get the most current date
-
     my $date=$self->get_AE_last_processed_date_from_biorep_id($biorep_id);
     my $unix_time = UnixDate( ParseDate($date), "%s" );
 

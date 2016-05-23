@@ -60,6 +60,7 @@ sub get_ENA_title { # it works for sample, run and experiment ids
     $response_string = $response->decoded_content;  
   }
   else {
+
     return 0;
   }
   my $doc = $parser->parse_string($response_string);
@@ -69,7 +70,10 @@ sub get_ENA_title { # it works for sample, run and experiment ids
   }
 
   elsif(!$doc->findnodes("//TITLE")){
+
+    print STDERR "I could not get a node from the xml doc of TITLE for sample/run/experiment id $id\n";
     return 0;   
+
   }else{
 
     my @nodes = $doc->findnodes("//TITLE");
@@ -81,6 +85,7 @@ sub get_ENA_title { # it works for sample, run and experiment ids
 
   }
 }
+
 # I call the endpoint (of the ENA sample metadata stored in $url) and get this type of response:
 #accession	altitude	bio_material	broker_name	cell_line	cell_type	center_name	checklist	col_scientific_name	col_tax_id	collected_by	collection_date	country	cultivar	culture_collection	depth	description	dev_stage	ecotype	elevation	environment_biome	environment_feature	environment_material	environmental_package	environmental_sample	experimental_factor	first_public	germline	host	host_body_site	host_genotype	host_gravidity	host_growth_conditions	host_phenotype	host_sex	host_status	host_tax_id	identified_by	investigation_type	isolate	isolation_source	location	mating_type	ph	project_name	protocol_label	salinity	sample_alias	sample_collection	sampling_campaign	sampling_platform	sampling_site	scientific_name	secondary_sample_accession	sequencing_method	serotype	serovar	sex	specimen_voucher	strain	sub_species	sub_strain	submitted_host_sex	submitted_sex	target_gene	tax_id	temperature	tissue_lib	tissue_type	variety
 #SAMEA1711073						The Genome Analysis Centre										INF1-C								N		2012-07-13	N																				RW_S9_barley					Hordeum vulgare subsp. vulgare	ERS155504												112509				

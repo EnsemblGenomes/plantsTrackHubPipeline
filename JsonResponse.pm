@@ -13,7 +13,7 @@ sub get_Json_response { # it returns the json response given the endpoint as par
   my $url = shift; # example: "http://www.ebi.ac.uk/fg/rnaseq/api/json/70/getRunsByStudy/SRP033494";
 
   my $response = $http->get($url);
-  my $content;
+  my $json;
   my $json_aref; # array ref with hash references with the json stanzas
 
   if (!$response->{success}) { # if it didn't succeed , retry 10 times
@@ -23,8 +23,8 @@ sub get_Json_response { # it returns the json response given the endpoint as par
       $response = $http->get($url);
 
       next unless ($response->{success} and $response->{success} ==1);
-      $content=$response->{content};     
-      $json_aref = decode_json($content); # it returns an array reference with hash references
+      $json=$response->{content};     
+      $json_aref = decode_json($json); # it returns an array reference with hash references
       return ($json_aref);      
     }
 
@@ -36,8 +36,8 @@ sub get_Json_response { # it returns the json response given the endpoint as par
 
   elsif($response->{success} ==1) { # if the response is successful then I get 1 # checks the url to be correct and server to give response
 
-    $content=$response->{content};     
-    $json_aref = decode_json($content); # it returns an array reference with hash references 
+    $json=$response->{content};     
+    $json_aref = decode_json($json); # it returns an array reference with hash references (JSON module)
 
     return ($json_aref);
   }

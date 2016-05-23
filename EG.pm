@@ -35,8 +35,6 @@ if(!$json_response){ # if response is 0
 #AMTR1.0	GCA_000471905.1
 #Theobroma_cacao_20110822	GCA_000403535.1
 
-my %asmbNames ;
-my %asmbId_asmbName;
 my %plant_names;
 my %species_name_assembly_id_hash;
 my %species_name_assembly_name_hash;
@@ -44,7 +42,6 @@ my %species_name_assembly_name_hash;
 
 foreach my $hash_ref (@array_response_plants_assemblies){
 
-  $asmbNames  {$hash_ref->{"assembly_name"}} = 1;
   $plant_names{$hash_ref->{"species"}} =1 ;
 
   $species_name_assembly_name_hash {$hash_ref->{"species"} } =  $hash_ref->{"assembly_name"};
@@ -56,11 +53,7 @@ foreach my $hash_ref (@array_response_plants_assemblies){
   }else{
     $species_name_assembly_id_hash {$hash_ref->{"species"} } =  $hash_ref->{"assembly_id"};
   }
-  next if(!$hash_ref->{"assembly_id"}); # 2 species don't have assembly ids now (Feb 2016) : triticum_aestivum and oryza_rufipogon 
 
-  $asmbId_asmbName{$hash_ref->{"assembly_id"} } = $hash_ref->{"assembly_name"}; 
-
-  
 }
 
 
