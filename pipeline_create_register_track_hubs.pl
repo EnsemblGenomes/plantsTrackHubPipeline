@@ -28,6 +28,9 @@ use AEStudy;
 my $registry_user_name = $ENV{'THR_USER'}; 
 my $registry_pwd = $ENV{'THR_PWD'};
 
+defined $registry_user_name and $registry_pwd
+  or die "Track Hub Registry username and password are required to be set as shell variables\n";
+
 my $server_dir_full_path ; # ie. ftp://ftp.ensemblgenomes.org/pub/misc_data/.TrackHubs
 my $server_url ;  # ie. /nfs/ensemblgenomes/ftp/pub/misc_data/.TrackHubs;
 my $track_hub_visibility; # defines whether when I register a TH in the THR will be publicly available or not. Give "hidden" or "public"
@@ -487,7 +490,7 @@ sub print_registered_TH_in_THR_stats_after_pipeline_is_run{
         $count_skipped_studies++;
         my $study_obj = AEStudy->new($study_id,$plant_names_AE_response_href);
         my %bioreps_hash = %{$study_obj->get_biorep_ids};
-        print $count_skipped_studies. ". " .$reason." ". $study_id." (".scalar (keys %bioreps_hash)." bioreps)\n";
+        print $count_skipped_studies. ". ". $study_id. " (".scalar (keys %bioreps_hash)." bioreps)\t$reason\n";
       }
     }
   }
