@@ -10,14 +10,13 @@ Pipeline:
 
 Parameters:
 
--THR_username etapanari   (of the track Hub Registry account) <br />
--THR_password  (of the track Hub Registry account) <br />
 -server_dir_full_path  (location of where the track hub files to be stored)<br />
 -server_url  (server url of the location of the track hubs)<br />
+-th_visibility <br />
 -do_track_hubs_from_scratch (optional flag) <br />
 
 Example run:
 
-perl pipeline_create_register_track_hubs.pl -THR_username etapanari -THR_password testing -server_dir_full_path /nfs/ensemblgenomes/ftp/pub/misc_data/Track_Hubs -server_url ftp://ftp.ensemblgenomes.org/pub/misc_data/Track_Hubs -do_track_hubs_from_scratch 1> output 2>std_errors
+perl pipeline_create_register_track_hubs.pl -server_dir_full_path full_path_for_storing_the_ths -server_url url_of_the_directory_of_the_ths -th_visibility public -do_track_hubs_from_scratch 1> output 2>std_errors
 
 
