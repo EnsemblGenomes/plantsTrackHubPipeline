@@ -12,7 +12,7 @@ Parameters:
 
 -server_dir_full_path  (location of where the track hub files to be stored)<br />
 -server_url  (server url of the location of the track hubs)<br />
--th_visibility <br />
+-th_visibility (values accepted: public/hidden -> whether the TH registered in the THR will be public or not)<br />
 -do_track_hubs_from_scratch (optional flag) <br />
 
 Example run:
