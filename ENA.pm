@@ -6,13 +6,18 @@ use warnings;
 use LWP::UserAgent;
 use XML::LibXML;
 use utf8;
+use DateTime::Format::Strptime;
 
 my $ua = LWP::UserAgent->new;
 my $parser = XML::LibXML->new;
 
+my $all_cram_locations_href = get_hash_of_locations_of_cram_submissions();
+my $unique_cram_locations_href= get_last_updated_cram_file_location_hash ($all_cram_locations_href);
+
 sub get_ENA_study_title{  
 
   my $study_id = shift; 
+
   my $study_title;
 
   my $url ="http://www.ebi.ac.uk/ena/data/view/$study_id&display=xml";
@@ -43,7 +48,7 @@ sub get_ENA_study_title{
   $study_title = $nodes[0]->firstChild->data; #it's always 1 node
   utf8::encode($study_title);
   return $study_title;
-  
+
 }
 
 sub get_ENA_title { # it works for sample, run and experiment ids
@@ -64,25 +69,23 @@ sub get_ENA_title { # it works for sample, run and experiment ids
     return 0;
   }
   my $doc = $parser->parse_string($response_string);
+  my @nodes = $doc->findnodes("//TITLE");
 
   if ($doc =~/display type is either not supported or entry is not found/){
     return "not yet in ENA";
   }
 
-  elsif(!$doc->findnodes("//TITLE")){
+  elsif(!@nodes){
 
     print STDERR "I could not get a node from the xml doc of TITLE for sample/run/experiment id $id\n";
     return 0;   
 
   }else{
-
-    my @nodes = $doc->findnodes("//TITLE");
-  
+ 
     $title = $nodes[0]->firstChild->data; #it's always 1 node
     utf8::encode($title);
 
     return $title;
-
   }
 }
 
@@ -180,7 +183,6 @@ sub get_sample_metadata_response_from_ENA_warehouse_rest_call {  # returns a has
 
   }
   return \%metadata_key_value_pairs ; # hash with key -> metadata_key , value-> metadata_value
-
 }
 
 
@@ -246,7 +248,6 @@ sub get_all_sample_keys{
   }
 
   return \@array_keys;
-
 }
 
 # it makes this url, given the table ref with the keys:
@@ -279,7 +280,141 @@ sub create_url_for_call_sample_metadata { # i am calling this method for a sampl
   }
 
   return $url;
+}
+
+
+sub get_hash_of_locations_of_cram_submissions{
+
+  my $fake_study_id= "ERP014374"; # this is the study id that Christoph uses to submit the CRAM files to ENA. this study id includes all CRAM files that Chr. managed to submit to ENA from ArrayExpress.
+
+  my $url = "http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=ERP014374&result=analysis&fields=first_public,submitted_ftp&download=txt";
+
+#first_public	submitted_ftp
+#2016-03-04	ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram
+#2016-03-11	ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270806/DRR016127.cram
+
+  my $response = $ua->get($url); 
+
+  my $response_string = $response->decoded_content;
+
+  if($response->code != 200 or $response_string =~ /^ *$/ ){
+
+    print "\nCouldn't get submitted CRAM locations using $url with the first attempt, retrying..\n" ;
+
+    my $flag_success = 0 ;
+    for(my $i=1; $i<=10; $i++) {
+
+      print $i .".Retrying attempt: Retrying after 5s...\n";
+      sleep 5;
+      $response = $ua->get($url);
+
+      my $response_string = $response->decoded_content;
+
+      $response->code= $response->code;
+
+      if($response->code == 200){
+
+        $response_string = $response->decoded_content;
+
+        $flag_success =1 ;
+        print "Got CRAM locations after all!\n";
+        last;
+      }
+
+    }
+    if($flag_success ==0 or $response_string =~ /^ *$/){  # if after the 10 attempts I still don't get the metadata..
+     
+      print STDERR "Didn't get response for CRAM locations using url $url"."\t".$response->code."\n\n";
+      return 0;
+    }
+
+  }else{ # if there is proper response
+    
+    my %cram_name_ena_location; # same cram file submitted more than once. It will have a different ftp location since the analysis id will be different and it is included in the ftp location url, i can only keep the most recent date
+
+    my @lines= split(/\n/, $response_string);
+    
+    foreach my $line (@lines){
+
+      next if ($line=~/^first/);
+      next if (!$line);
+
+#2016-03-04	ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram
+      my @words= split(/\t/, $line);
+      next if(!$words[1]) or (!$words[0]);
+
+      if($words[1] =~/.+\/(.+)\.cram/){   # the cram name could be of type : SRR2912853.cram or E-MTAB-4045.biorep85.cram
+    
+        $cram_name_ena_location{$1}{$words[0]}=$words[1]; # it would be $cram_name_ena_location{DRR008478"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+        
+      }else{
+        print STDERR "In method get_hash_of_locations_of_cram_submissions, module ENA.pm , line ".__LINE__." could not get the cram name here $line in the regex\n";
+      }
+    }
+     
+    return \%cram_name_ena_location;
+  }
+}
+
+
+sub get_last_updated_cram_file_location_hash{
+  
+  my $location_hash = shift; # the hash would be like this: $location_hash{DRR008478"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+  my %unique_cram_names_href;
+  
+  foreach my $cram_name (keys %$location_hash){
+
+    my $max_timestamp=0;
+    my $timestamp;
+    my $location_of_max_timestamp;
+
+    foreach my $date (keys %{$location_hash->{$cram_name}}){
+
+      my $strp = DateTime::Format::Strptime->new(
+      pattern => '%Y-%m-%d', #2016-03-04
+      time_zone => 'local',
+      );
+      my $dt = $strp->parse_datetime($date);
+      $timestamp=$dt->epoch;
+
+      if($timestamp > $max_timestamp){
+
+        $max_timestamp = $timestamp;
+        $location_of_max_timestamp = $location_hash->{$cram_name}{$date}; 
+      }
+    }
+
+    $unique_cram_names_href{$cram_name}=$location_of_max_timestamp; #the hash would be like this: $unique_cram_names_href{DRR008478"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+  }
+
+  return \%unique_cram_names_href;
 
 }
+
+sub get_ENA_cram_location{
+
+  my $biorep_id = shift;
+
+  my $cram_locations_href = $unique_cram_locations_href; # $unique_cram_locations_href os global variable
+
+  if($cram_locations_href->{$biorep_id}){
+    return $cram_locations_href->{$biorep_id};
+  }else{
+    return 0;
+  }
+
+}
+
+
+sub give_big_data_file_type{
+  
+  my $big_date_url = shift;
+
+  $big_date_url=~ /.+\/.+\.(.+)$/; #  http://ftp.sra.ebi.ac.uk/vol1/ERZ285/ERZ285703/SRR3019819.cram
+
+  return $1; # ie cram
+
+}
+
 
 1;

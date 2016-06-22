@@ -14,11 +14,12 @@ $| = 1;
 sub new {
 
   my $class = shift;
+
   my $username  = shift;
   my $password = shift;
   my $visibility = shift; # in the THR I can register track hubs but being not publicly available. This is useful for testing. I can only see the track hubs with visibility "hidden" in my THR account, they are not seen by anyone else
   
-  defined $username and $password
+  defined $username and $password and $visibility
     or die "Some required parameters are missing in the constructor in order to construct a Registry object\n";
 
   my $self = {
@@ -120,6 +121,7 @@ sub register_track_hub{
 sub delete_track_hub{
 
   my $self = shift;
+
   my $track_hub_id = shift;
 
   defined $track_hub_id
@@ -241,6 +243,7 @@ sub give_all_Registered_track_hub_names{
 sub get_Registry_hub_last_update { # gives the last update date(unix time) of the registration of the track hub
 
   my $self = shift;
+
   my $name = shift;  # track hub name, ie study_id
 
   defined $name
@@ -315,6 +318,7 @@ sub get_Registry_hub_last_update { # gives the last update date(unix time) of th
 sub give_all_bioreps_of_study_from_Registry {
 
   my $self = shift;
+
   my $name = shift;  # track hub name, ie study_id
 
   defined $name

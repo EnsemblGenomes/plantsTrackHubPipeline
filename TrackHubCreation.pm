@@ -17,6 +17,7 @@ my $meta_keys_aref = ENA::get_all_sample_keys(); # array ref that has all the ke
 sub new {
 
   my $class = shift;
+
   my $study_id  = shift; 
   my $server_dir_full_path = shift;
   
@@ -37,6 +38,7 @@ sub make_track_hub{ # main method, creates the track hub of a study in the folde
   my $self= shift;
   my $study_id= $self->{study_id};
   my $server_dir_full_path = $self->{server_dir_full_path};
+
   my $plant_names_response_href = shift;
 
   my $study_obj = AEStudy->new($study_id,$plant_names_response_href);
@@ -55,36 +57,30 @@ sub make_track_hub{ # main method, creates the track hub of a study in the folde
   my %assembly_names = %{$study_obj->get_assembly_names}; 
 
   foreach my $assembly_name (keys %assembly_names){
-    if (!$self->make_trackDbtxt_file($server_dir_full_path, $study_obj, $assembly_name)) { # method returns 0 when there is no ENA warehouse metadata
+
+    my $return_of_make_trackDbtxt_file = $self->make_trackDbtxt_file($server_dir_full_path, $study_obj, $assembly_name);
+
+    if (!$return_of_make_trackDbtxt_file) { # method returns 0 when there is no ENA warehouse metadata
       return ".. No ENA Warehouse metadata found for at least 1 of the sample ids\n";
     }
-    $self->make_trackDbtxt_file($server_dir_full_path, $study_obj, $assembly_name);
+    if ($return_of_make_trackDbtxt_file eq "at least 1 cram file of the TH that was not found in ENA"){
+      return "..Skipping this TH because at least 1 of the cram files of the TH is not yet in ENA\n";
+    }
+    #$self->make_trackDbtxt_file($server_dir_full_path, $study_obj, $assembly_name);
   }
 
   return "..Done\n";
 }
 
-sub run_system_command {
-
-  my $command = shift;
-
-  `$command`;
-
-  if($? !=0){ # if exit code of the system command is successful returns 0
-    return 0; 
-
-  }else{
-     return 1;
-  }
-}
 
 sub make_study_dir{
 
   my $self= shift;
   my ($server_dir_full_path,$study_obj) = @_;
+
   my $study_id = $study_obj->id;  
 
-  run_system_command("mkdir $server_dir_full_path" . '/' . $study_id)
+  Helper::run_system_command("mkdir $server_dir_full_path" . '/' . $study_id)
     or die "I cannot make dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
 }
 
@@ -97,7 +93,7 @@ sub make_assemblies_dirs{
   # For every assembly I make a directory for the study -track hub
   foreach my $assembly_name (keys %{$study_obj->get_assembly_names}){
 
-    run_system_command("mkdir $server_dir_full_path/$study_id/$assembly_name")
+    Helper::run_system_command("mkdir $server_dir_full_path/$study_id/$assembly_name")
       or die "I cannot make directories of assemblies in $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
   }
 }
@@ -106,10 +102,11 @@ sub make_hubtxt_file{
 
   my $self= shift;
   my ($server_dir_full_path,$study_obj) = @_;
+
   my $study_id = $study_obj->id;
   my $hub_txt_file= "$server_dir_full_path/$study_id/hub.txt";
 
-  run_system_command("touch $hub_txt_file")
+  Helper::run_system_command("touch $hub_txt_file")
     or die "Could not create hub.txt file in the $server_dir_full_path location\n";
   
   open(my $fh, '>', $hub_txt_file) or die "Could not open file '$hub_txt_file' $! in ".__FILE__." line: ".__LINE__."\n";
@@ -146,12 +143,13 @@ sub make_genomestxt_file{
 
   my $self= shift;
   my ($server_dir_full_path,$study_obj) = @_;  
+
   my $assembly_names_href = $study_obj->get_assembly_names;
   my $study_id = $study_obj->id;
 
   my $genomes_txt_file = "$server_dir_full_path/$study_id/genomes.txt";
 
-  run_system_command("touch $genomes_txt_file")
+  Helper::run_system_command("touch $genomes_txt_file")
     or die "Could not create genomes.txt file in the $server_dir_full_path location\n";
 
   open(my $fh2, '>', $genomes_txt_file) or die "Could not open file '$genomes_txt_file' $!\n";
@@ -167,13 +165,13 @@ sub make_genomestxt_file{
 sub make_trackDbtxt_file{
 
   my $self =shift;
+
   my ($ftp_dir_full_path, $study_obj , $assembly_name) = @_;
     
   my $study_id =$study_obj->id;
-
   my $trackDb_txt_file="$ftp_dir_full_path/$study_id/$assembly_name/trackDb.txt";
 
-  run_system_command("touch $trackDb_txt_file")
+  Helper::run_system_command("touch $trackDb_txt_file")
     or die "Could not create trackDb.txt file in the $ftp_dir_full_path/$study_id/$assembly_name location\n";       
 
   open(my $fh, '>', $trackDb_txt_file)
@@ -184,34 +182,44 @@ sub make_trackDbtxt_file{
     print STDERR "No samples found for study $study_id\n"; 
   }
 
-  my $counter_of_tracks=0;
+  my $counter_of_tracks=0; # i need to count the number of tracks in order to have only the first 10 "on" by default
 
   foreach my $sample_id ( @sample_ids ) { 
 
-    if(!($self->make_biosample_super_track_obj($sample_id))) {  # method returns 0 when there is no ENA warehouse sample metadata
+    my $super_track_obj = $self->make_biosample_super_track_obj($sample_id);
+
+    if(!$super_track_obj) {  # method returns 0 when there is no ENA warehouse sample metadata
       return 0;
     }
-    my $super_track_obj = $self->make_biosample_super_track_obj($sample_id);
+
     $super_track_obj->print_track_stanza($fh);
 
     my $visibility="off";
 
     foreach my $biorep_id (keys %{$study_obj->get_biorep_ids_from_sample_id($sample_id)}){
-    
-      if(!($self->make_biosample_sub_track_obj($study_obj,$biorep_id,$sample_id,$visibility))){ # this is in case there is a run id from AE that is not yet in ENA, then I want to skip doing this track, this method returns 0 if this is the case
-        next;
-      }
+
       $counter_of_tracks++;
       if ($counter_of_tracks <=10){
         $visibility = "on";
       }else{
         $visibility = "off";
       }
-      my $track_obj=$self->make_biosample_sub_track_obj($study_obj,$biorep_id,$sample_id,$visibility);
+
+      my $track_obj = $self->make_biosample_sub_track_obj($study_obj,$biorep_id,$sample_id,$visibility);
+
+      if(!$track_obj){ # this is in case there is a run id from AE that is not yet in ENA, then I want to skip doing this track, this method returns 0 if this is the case
+        next;
+      }
+      if($track_obj eq "no cram in ENA"){
+
+        return "at least 1 cram file of the TH that was not found in ENA";
+      }
+
       $track_obj->print_track_stanza($fh);
 
     } 
   }
+
   return 1;
 } 
 
@@ -302,11 +310,6 @@ sub make_biosample_super_track_obj{
     foreach my $meta_key (keys %metadata_pairs) {  # printing the sample metadata
  
       my $meta_value = $metadata_pairs{$meta_key} ;
-
-      # if the date of the metadata has the months in this format jun-Jun-June then I have to convert it to 06 as the Registry complains
-      if($meta_key =~/date/ and $meta_value =~/[(a-z)|(A-Z)]/){
-        print STDERR "found date in metadata key:$meta_key value:$meta_value\n" ; ########################## THIS IS FOR DEBUGGING
-      }
       my $pair= printlabel_key($meta_key)."=".printlabel_value($meta_value);
       push (@meta_pairs, $pair);
     }
@@ -320,17 +323,25 @@ sub make_biosample_super_track_obj{
 sub make_biosample_sub_track_obj{ 
 # i need 5 pieces of data to make the track obj, to return:  track_name, parent_name, big_data_url , long_label ,file_type
   my $self= shift;
+
   my $study_obj = shift;
   my $biorep_id = shift; #track name
   my $parent_id = shift;
   my $visibility= shift;
 
-  my $big_data_url = $study_obj->get_big_data_file_location_from_biorep_id($biorep_id);
+  #my $big_data_url = $study_obj->get_big_data_file_location_from_biorep_id($biorep_id);
+
+  my $study_id=$study_obj->id;
+  my $big_data_url = ENA::get_ENA_cram_location($biorep_id) ; 
+
+  if (!$big_data_url){ # if the cram file is not yet in ENA the method ENA::get_ENA_cram_location($biorep_id) returns 0
+
+    print STDERR "This biorep id $biorep_id (study id $study_id) has not yet its CRAM file in ENA\n";
+    return "no cram in ENA";
+  }
   my $short_label_ENA;
   my $long_label_ENA;
   my $ena_title = get_ENA_biorep_title($study_obj,$biorep_id);
-
-  my $study_id=$study_obj->id;
 
   if($biorep_id!~/biorep/){
     $short_label_ENA = "ENA Run:$biorep_id";
@@ -364,7 +375,7 @@ sub make_biosample_sub_track_obj{
       }
   }
 
-  my $file_type =$study_obj->give_big_data_file_type_of_biorep_id($biorep_id);
+  my $file_type = ENA::give_big_data_file_type($big_data_url);
   my $track_obj = SubTrack->new($biorep_id,$parent_id,$big_data_url,$short_label_ENA,$long_label_ENA,$file_type,$visibility);
   return $track_obj;
 

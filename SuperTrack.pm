@@ -8,6 +8,7 @@ use warnings;
 sub new {
 
   my $class = shift;
+
   my $track_name = shift;
   my $long_label = shift;
   my $metadata = shift;

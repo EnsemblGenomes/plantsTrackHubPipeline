@@ -6,6 +6,7 @@ use warnings;
 use Date::Manip;
 use EG;
 use ArrayExpress;
+use ENA;
 
 ## this is a class of an AE study. It considers only PLANT species.
 # AE REST call: http://www.ebi.ac.uk/fg/rnaseq/api/json/70/getRunsByStudy/SRP068911
@@ -13,6 +14,7 @@ use ArrayExpress;
 sub new {
 
   my $class = shift;
+
   my $study_id = shift;
   my $plant_names_response_href = shift;
 
@@ -75,7 +77,7 @@ sub make_runs_tuple_plants_of_study {
       $run_tuple{$run_stanza->{"BIOREP_ID"}}{"sample_ids"}=$run_stanza->{"SAMPLE_IDS"}; # ie $run{"SRR1042754"}{"sample_ids"}="SAMN02434874,SAMN02434875"
       $run_tuple{$run_stanza->{"BIOREP_ID"}}{"organism"}=$run_stanza->{"REFERENCE_ORGANISM"};
       $run_tuple{$run_stanza->{"BIOREP_ID"}}{"assembly_name"}=$run_stanza->{"ASSEMBLY_USED"};  #ie "TAIR10"
-      $run_tuple{$run_stanza->{"BIOREP_ID"}}{"big_data_file_server_location"}=$run_stanza->{"FTP_LOCATION"};
+      $run_tuple{$run_stanza->{"BIOREP_ID"}}{"big_data_file_server_location"}=$run_stanza->{"CRAM_LOCATION"};
       $run_tuple{$run_stanza->{"BIOREP_ID"}}{"AE_processed_date"}=$run_stanza->{"LAST_PROCESSED_DATE"};
       $run_tuple{$run_stanza->{"BIOREP_ID"}}{"run_ids"}=$run_stanza->{"RUN_IDS"};
  
@@ -234,6 +236,7 @@ sub get_big_data_file_location_from_biorep_id {
 
   my $self=shift;
   my $biorep_id = shift;
+
   my $run_tuple = $self->{run_tuple};
   
   if(!$run_tuple->{$biorep_id}){

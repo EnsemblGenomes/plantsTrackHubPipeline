@@ -1,8 +1,13 @@
+
+# do first:
+# export THR_USER=your_user_name_in_your_track_hub_registry_account
+# export THR_PWD=your_password_in_your_track_hub_registry_account
+
 # example run:
-# perl make_and_register_track_hubs.pl -THR_username testing -THR_password testing -server_dir_full_path /nfs/ensemblgenomes/ftp/pub/misc_data/Track_Hubs -server_url ftp://ftp.ensemblgenomes.org/pub/misc_data/Track_Hubs -file_location_of_study_ids_or_species ./file_with_ids -file_content_study_ids
+# perl make_and_register_track_hubs.pl -server_dir_full_path /nfs/ensemblgenomes/ftp/pub/misc_data/Track_Hubs -server_url ftp://ftp.ensemblgenomes.org/pub/misc_data/Track_Hubs -th_visibility public -file_location_of_study_ids_or_species ./file_with_ids -file_content_study_ids 1> output 2>errors
 
 # or 
-# perl make_and_register_track_hubs.pl -THR_username testing -THR_password testing -server_dir_full_path /nfs/ensemblgenomes/ftp/pub/misc_data/Track_Hubs -server_url ftp://ftp.ensemblgenomes.org/pub/misc_data/Track_Hubs -file_location_of_study_ids_or_species ./file_with_ids -file_content_species_names
+# perl make_and_register_track_hubs.pl -server_dir_full_path /nfs/ensemblgenomes/ftp/pub/misc_data/Track_Hubs -server_url ftp://ftp.ensemblgenomes.org/pub/misc_data/Track_Hubs -th_visibility public  -file_location_of_study_ids_or_species ./file_with_ids -file_content_species_names 1> output 2>errors
 
 use strict ;
 use warnings;
@@ -14,10 +19,12 @@ use AEStudy;
 use Registry;
 use EG;
 
-my ($registry_user_name,$registry_pwd);
+my $registry_user_name = $ENV{'THR_USER'}; 
+my $registry_pwd = $ENV{'THR_PWD'};
+
 my $server_dir_full_path ; # ie. ftp://ftp.ensemblgenomes.org/pub/misc_data/.TrackHubs
 my $server_url ;  # ie. /nfs/ensemblgenomes/ftp/pub/misc_data/.TrackHubs;
-my $study_id;
+my $track_hub_visibility; # defines whether when I register a TH in the THR will be publicly available or not. Give "hidden" or "public"
 my $file_location_of_study_ids_or_species;
 my $species_file_content;
 my $study_ids_file_content;
@@ -25,10 +32,10 @@ my $study_ids_file_content;
 my $start_time = time();
 
 GetOptions(
-  "THR_username=s" => \$registry_user_name ,  
-  "THR_password=s" => \$registry_pwd, 
+
   "server_dir_full_path=s" => \$server_dir_full_path,
   "server_url=s" => \$server_url,  
+  "th_visibility=s" => \$track_hub_visibility,
   "file_location_of_study_ids_or_species=s" => \$file_location_of_study_ids_or_species,
   "file_content_species_names"  => \$species_file_content,  # flag
   "file_content_study_ids"  => \$study_ids_file_content  # flag
@@ -37,6 +44,10 @@ GetOptions(
 
 if(!$species_file_content and !$study_ids_file_content){
   die "\nPlease give flag \"-file_content_species_names\" or \"-file_content_study_ids\" , depending on the content of the file \"$file_location_of_study_ids_or_species\" (does it have study ids or species names?)\n\n";
+}
+
+if(!$track_hub_visibility){
+  die "\nPlease give TH visibility setting in the THR either hidden or public\n";
 }
 
 my %study_ids;
@@ -94,9 +105,9 @@ if($study_ids_file_content){
 
 
 {
-  print_calling_params_logging($registry_user_name , $registry_pwd , $server_dir_full_path , $server_url , $file_location_of_study_ids_or_species);
+  print_calling_params_logging($registry_user_name , $registry_pwd , $server_dir_full_path , $server_url , $track_hub_visibility, $file_location_of_study_ids_or_species);
 
-  my $registry_obj = Registry->new($registry_user_name, $registry_pwd);
+  my $registry_obj = Registry->new($registry_user_name, $registry_pwd,$track_hub_visibility); 
 
   if (! -d $server_dir_full_path) {  # if the directory that the user defined to write the files of the track hubs doesnt exist, I try to make it
 
@@ -115,7 +126,7 @@ if($study_ids_file_content){
 
   my $organism_assmblAccession_EG_href = EG::get_species_name_assembly_id_hash(); #$hash{"brachypodium_distachyon"} = "GCA_000005505.1"         also:  $hash{"oryza_rufipogon"} = "0000"
 
-  print_registry_registered_number_of_th($registry_obj,$plant_names_AE_response_href);
+  print_registry_registered_number_of_th($registry_obj);
  
   my $unsuccessful_studies_href = make_register_THs_with_logging($registry_obj, \%study_ids , $server_dir_full_path, $organism_assmblAccession_EG_href,$plant_names_AE_response_href); 
   my $counter=0;
@@ -140,13 +151,13 @@ if($study_ids_file_content){
   print "Local date,time: $date_string2\n";
 
   print "\nAfter the updates:\n";
-  print_registry_registered_number_of_th($registry_obj,$plant_names_AE_response_href);
+  print_registry_registered_number_of_th($registry_obj);
 
 
   $| = 1; 
 
   if (scalar @obsolete_studies > 0){
-    print "\nObsolete studies list (not any more in AE):\n";
+    print "\nObsolete studies list (not any more in AE) but still in THR, I haven't deleted them:\n";
     foreach my $obsolete_study (@obsolete_studies){
       print $obsolete_study."\n";
     }
@@ -183,6 +194,7 @@ sub make_register_THs_with_logging{
 
     my $ls_output = `ls $server_dir_full_path`  ;
     my $flag_new_or_update;
+
     if($ls_output =~/$study_id/){ # i check if the directory of the study exists already
    
       print " (update) "; # if it already exists
@@ -194,6 +206,7 @@ sub make_register_THs_with_logging{
         next;
       }
     }else{
+      $flag_new_or_update = "new";
       print " (new) ";
     }
 
@@ -207,6 +220,7 @@ sub make_register_THs_with_logging{
 
       print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id will be deleted\n\n" ;
       print "\t..Skipping registration part\n";
+
       if ($flag_new_or_update eq "update"){ # if the track hub is already registered but in the process of re-creating it smt went wrong with its creation so I removed it from the server, I have to rm it from the THR too
         $registry_obj->delete_track_hub($study_id);
       }
@@ -218,11 +232,15 @@ sub make_register_THs_with_logging{
 
       if ($script_output=~/No ENA Warehouse metadata found/){
 
-        $unsuccessful_studies{"sample metadata not yet in ENA"} {$study_id}= 1;
+        $unsuccessful_studies{"Sample metadata not yet in ENA"} {$study_id}= 1;
+
+      }elsif($script_output=~/Skipping this TH because at least 1 of the cram files of the TH is not yet in ENA/){ 
+
+        $unsuccessful_studies{"At least 1 cram file of study is not yet in ENA"} {$study_id}= 1;
 
       }else{
 
-        $unsuccessful_studies{"not yet in ENA"} {$study_id}= 1;
+        $unsuccessful_studies{"Study not yet in ENA"} {$study_id}= 1;
       }
 
      }
@@ -252,14 +270,18 @@ sub make_register_THs_with_logging{
 
 sub print_calling_params_logging{
   
-  my ($registry_user_name , $registry_pwd , $server_dir_full_path ,$server_url,$file_location_of_study_ids_or_species) = @_;
+  my ($registry_user_name , $registry_pwd , $server_dir_full_path ,$server_url, $track_hub_visibility, $file_location_of_study_ids_or_species) = @_;
   my $date_string = localtime();
 
+
+  print "* Using these shell variables of the THR account:\n\n";
+  print " THR_USER=$registry_user_name\n THR_PWD=$registry_pwd\n\n";
+ 
   print "* Started running the pipeline on:\n";
   print "Local date,time: $date_string\n";
 
   print "\n* Ran this pipeline:\n\n";
-  print "perl pipeline_create_register_track_hubs.pl -THR_username $registry_user_name -THR_password $registry_pwd -server_dir_full_path $server_dir_full_path -server_url $server_url -file_location_of_study_ids_or_species $file_location_of_study_ids_or_species";
+  print "perl make_and_register_track_hubs.pl -server_dir_full_path $server_dir_full_path -server_url $server_url -th_visibility $track_hub_visibility -file_location_of_study_ids_or_species $file_location_of_study_ids_or_species";
   if ($species_file_content){
     print " -file_content_species_names";
   }else{
@@ -278,15 +300,13 @@ sub print_calling_params_logging{
 sub print_registry_registered_number_of_th{
 
   my $registry_obj = shift;
-  my $plant_names_AE_response_href  = shift ;
 
   my $all_track_hubs_in_registry_href = $registry_obj->give_all_Registered_track_hub_names();
   my %distinct_bioreps;
 
   foreach my $hub_name (keys %{$all_track_hubs_in_registry_href}){
   
-    my $study_obj = AEStudy->new($hub_name,$plant_names_AE_response_href );
-    my %bioreps_hash = %{$study_obj->get_biorep_ids};
+    my %bioreps_hash = %{$registry_obj->give_all_bioreps_of_study_from_Registry($hub_name)};
     map { $distinct_bioreps{$_}++ } keys %bioreps_hash;
   }
 
