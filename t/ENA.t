@@ -39,7 +39,7 @@ my $sample_title = EGPlantTHs::ENA::get_ENA_title("SAMN02666886");
 is($sample_title,"Arabidopsis thaliana Bur-0 X Col-0 seedling, biological replicate 1", "ENA title of sample SAMN02666886 is as expected");
 
 #test7
-my $sample_title_wrong_sample_title = ENA::get_ENA_title("SAMN0266688");
+my $sample_title_wrong_sample_title = EGPlantTHs::ENA::get_ENA_title("SAMN0266688");
 is($sample_title_wrong_sample_title,"not yet in ENA", "not yet in ENA response when giving wrong sample id..");
 
 #test8
