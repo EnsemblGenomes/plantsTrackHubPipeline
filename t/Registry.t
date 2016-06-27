@@ -167,7 +167,7 @@ is(ref($bioreps_hash_ref), 'HASH', 'The method returns a hash ref');
 
 #test17
 my $plant_names_AE_response_href = EGPlantTHs::ArrayExpress::get_plant_names_AE_API();
-my $study_obj = AEStudy->new("SRP045759",$plant_names_AE_response_href);
+my $study_obj = EGPlantTHs::AEStudy->new("SRP045759",$plant_names_AE_response_href);
 
 my $biorep_ids_from_AE_href= $study_obj->get_biorep_ids();
 
