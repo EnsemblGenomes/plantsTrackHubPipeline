@@ -32,8 +32,8 @@ dies_ok(sub{EGPlantTHs::Registry->new("blabla")},'checks if wrong object constru
 
 # let's make first the TH:
 `mkdir /nfs/ensemblgenomes/ftp/pub/misc_data/.TrackHubs/testing`;
-my $trackHubCreator_obj = TrackHubCreation->new("SRP045759" ,"/nfs/ensemblgenomes/ftp/pub/misc_data/.TrackHubs/testing" );
-my $plant_names_AE_response_href = ArrayExpress::get_plant_names_AE_API();
+my $trackHubCreator_obj = EGPlantTHs::TrackHubCreation->new("SRP045759" ,"/nfs/ensemblgenomes/ftp/pub/misc_data/.TrackHubs/testing" );
+my $plant_names_AE_response_href = EGPlantTHs::ArrayExpress::get_plant_names_AE_API();
 my $output=$trackHubCreator_obj->make_track_hub($plant_names_AE_response_href);
 
 # -----
