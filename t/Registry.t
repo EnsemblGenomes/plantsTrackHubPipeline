@@ -25,7 +25,7 @@ use_ok(EGPlantTHs::Registry);
 my $registry_obj = EGPlantTHs::Registry->new("mytesting" ,"testing", "hidden" );
 
 # test2
-isa_ok($registry_obj,'Registry','checks whether the object constructed is of my class type');
+isa_ok($registry_obj,'EGPlantTHs::Registry','checks whether the object constructed is of my class type');
 
 # test3
 dies_ok(sub{EGPlantTHs::Registry->new("blabla")},'checks if wrong object construction of my class dies');
