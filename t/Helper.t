@@ -56,16 +56,18 @@ EGPlantTHs::Helper::run_system_command ("rm ./electra");
 my $cmd_wrong2 = "blabla";
 my ($exit_code_wrong2,$output2) = EGPlantTHs::Helper::run_system_command_with_output ($cmd_wrong2);
 
+
 is($exit_code_wrong2,0,'Check of unsuccessful system command run returns 0');
+#test8
 is($output2,'','Checks if output of wrong command is null');
 
 
-#test8
+#test9
 EGPlantTHs::Helper::run_system_command ("mkdir ./my_empty_dir");
 my ($exit_code3,$output3) = EGPlantTHs::Helper::run_system_command_with_output ("ls ./my_empty_dir");
 is($exit_code3,1,'Check of successful system command run for method run_system_command_with_output');
 
-#test9
+#test10
 is($output3,'','Checks if output of \'ls\' on an empty dir is null');
 
 EGPlantTHs::Helper::run_system_command ("rm -r ./my_empty_dir");

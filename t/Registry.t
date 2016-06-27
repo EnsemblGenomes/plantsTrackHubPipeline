@@ -2,7 +2,6 @@
 use Test::More;
 use Test::Exception;
 #use Devel::Cover;
-use EGPlantTHs::TrackHubCreation;
 
 use FindBin;
 use lib $FindBin::Bin . '/../modules';
@@ -10,6 +9,7 @@ use lib $FindBin::Bin . '/../modules';
 use Capture::Tiny ':all';
 use Time::Piece;
 use EGPlantTHs::AEStudy;
+use EGPlantTHs::TrackHubCreation;
 
 # -----
 # checks if the module can load
