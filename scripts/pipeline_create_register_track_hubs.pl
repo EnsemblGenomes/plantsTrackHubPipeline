@@ -12,15 +12,18 @@
 use strict ;
 use warnings;
 
+
+use FindBin;
+use lib $FindBin::Bin . '/../modules';
 use Getopt::Long;
 use DateTime;   
 use Time::HiRes;
 use Time::Piece;
-use Registry;
-use TrackHubCreation;
-use Helper;
+use EGPlantTHs::Registry;
+use EGPlantTHs::TrackHubCreation;
+use EGPlantTHs::Helper;
 use Data::Dumper;
-use ENA;
+use EGPlantTHs::ENA;
 
 use ArrayExpress;
 use AEStudy;
@@ -51,13 +54,13 @@ my $start_run = time();
 
   print_calling_params_logging($registry_user_name , $registry_pwd , $server_dir_full_path , $server_url, $track_hub_visibility, $from_scratch);
   
-  my $registry_obj = Registry->new($registry_user_name, $registry_pwd,$track_hub_visibility);
+  my $registry_obj = EGPlantTHs::Registry->new($registry_user_name, $registry_pwd,$track_hub_visibility);
   
   if (! -d $server_dir_full_path) {  # if the directory that the user defined to write the files of the track hubs doesnt exist, I try to make it
 
     print "\nThis directory: $server_dir_full_path does not exist, I will make it now.\n";
 
-    Helper::run_system_command("mkdir $server_dir_full_path")
+    EGPlantTHs::Helper::run_system_command("mkdir $server_dir_full_path")
       or die "I cannot make dir $server_dir_full_path in script: ".__FILE__." line: ".__LINE__."\n";
   }
 
@@ -198,7 +201,7 @@ sub update_common_studies{
 
     if($ls_output =~/$study_id/){ # i check if the directory was created
 
-      my $method_return= Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
+      my $method_return= EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
       if (!$method_return){ # returns 1 if successfully deleted or 0 if not, !($method_return is like $method_return=0)
         print STDERR "I cannot rm dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
       }
@@ -259,7 +262,7 @@ sub create_new_studies_in_incremental_update{
     my $ls_output = `ls $server_dir_full_path`  ;
     if($ls_output =~/$study_id/){ # i check if the directory was created
 
-      my $method_return= Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
+      my $method_return= EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
       if (!$method_return){ # returns 1 if successfully deleted or 0 if not, !($method_return is like $method_return=0)
         print STDERR "I cannot rm dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
         print STDERR "This study $study_id will be skipped";
@@ -313,7 +316,7 @@ sub remove_obsolete_studies {
 
       $registry_obj->delete_track_hub($track_hub_id) ; # it's an obsolete study- it needs deletion
 
-      my $method_return= Helper::run_system_command("rm -r $server_dir_full_path/$track_hub_id");
+      my $method_return= EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$track_hub_id");
       if (!$method_return){ # returns 1 if successfully deleted or 0 if not, !($method_return is like $method_return=0)
         print STDERR "Could not remove obsolete track hub $track_hub_id in location $server_dir_full_path\n";
       }
@@ -516,7 +519,7 @@ sub delete_registered_th_and_remove_th_from_server{  # called only when option i
 
   print "\n ******** Deleting everything in directory $server_dir_full_path\n\n";
 
-  my ($successfully_ran_method,$ls_output) = Helper::run_system_command_with_output("ls $server_dir_full_path");
+  my ($successfully_ran_method,$ls_output) = EGPlantTHs::Helper::run_system_command_with_output("ls $server_dir_full_path");
 
   if($successfully_ran_method ==0) { 
 
@@ -530,7 +533,7 @@ sub delete_registered_th_and_remove_th_from_server{  # called only when option i
 
   if($successfully_ran_method ==1 and ($ls_output)){ # directory is not empty, I will delete all its contents
 
-    Helper::run_system_command("rm -r $server_dir_full_path/*")   # removing the track hub files in the server/dir
+    EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/*")   # removing the track hub files in the server/dir
       or die "ERROR: failed to remove contents of dir $server_dir_full_path in script: ".__FILE__." line: ".__LINE__."\n";
 
     print "Successfully deleted all content of $server_dir_full_path\n";    
@@ -722,7 +725,7 @@ sub make_and_register_track_hub{
   my $study_id = $study_obj->id;
   print "$line_counter.\tcreating track hub for study $study_id\t"; 
 
-  my $track_hub_creator_obj = TrackHubCreation->new($study_id,$server_dir_full_path);
+  my $track_hub_creator_obj = EGPlantTHs::TrackHubCreation->new($study_id,$server_dir_full_path);
   my $script_output = $track_hub_creator_obj->make_track_hub($plant_names_AE_response_href);
 
   print $script_output;
@@ -734,7 +737,7 @@ sub make_and_register_track_hub{
     print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id will be deleted\n\n" ;
     print "\t..Skipping registration part\n";
 
-    Helper::run_system_command("rm -r $server_dir_full_path/$study_id")      
+    EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id")      
       or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
 
     $line_counter --;
@@ -761,7 +764,7 @@ sub make_and_register_track_hub{
     $return_string = $output;
 
     if($output !~ /is Registered/){# if something went wrong with the registration, i will not make a track hub out of this study
-      Helper::run_system_command("rm -r $server_dir_full_path/$study_id")
+      EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id")
         or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
 
       $line_counter --;

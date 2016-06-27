@@ -6,14 +6,16 @@
 use strict ;
 use warnings;
 
-use Registry;
+use FindBin;
+use lib $FindBin::Bin . '/../modules';
+use EGPlantTHs::Registry;
 
 
 my $registry_user_name = $ENV{'THR_USER'}; 
 my $registry_pwd = $ENV{'THR_PWD'};
 
 
-my $registry_obj = Registry->new($registry_user_name, $registry_pwd,"public"); # dosn't matter the visibility setting in this case
+my $registry_obj = EGPlantTHs::Registry->new($registry_user_name, $registry_pwd,"public"); # dosn't matter the visibility setting in this case
 
 my %track_hub_names = %{$registry_obj->give_all_Registered_track_hub_names()};
 
