@@ -1,4 +1,4 @@
-package TrackHubCreation;
+package EGPlantTHs::TrackHubCreation;
 
 use strict ;
 use warnings;
