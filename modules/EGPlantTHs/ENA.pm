@@ -1,4 +1,4 @@
-package ENA;
+package EGPlantTHs::ENA;
 
 use strict ;
 use warnings;
