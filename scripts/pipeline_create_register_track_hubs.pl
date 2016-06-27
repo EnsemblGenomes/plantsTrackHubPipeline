@@ -19,14 +19,14 @@ use Getopt::Long;
 use DateTime;   
 use Time::HiRes;
 use Time::Piece;
+
 use EGPlantTHs::Registry;
 use EGPlantTHs::TrackHubCreation;
 use EGPlantTHs::Helper;
 use Data::Dumper;
 use EGPlantTHs::ENA;
-
-use ArrayExpress;
-use AEStudy;
+use EGPlantTHs::ArrayExpress;
+use EGPlantTHs::AEStudy;
 
 my $registry_user_name = $ENV{'THR_USER'}; 
 my $registry_pwd = $ENV{'THR_PWD'};
@@ -66,7 +66,7 @@ my $start_run = time();
 
   my $unsuccessful_studies_href;
 
-  my $plant_names_AE_response_href = ArrayExpress::get_plant_names_AE_API();
+  my $plant_names_AE_response_href = EGPlantTHs::ArrayExpress::get_plant_names_AE_API();
 
   if($plant_names_AE_response_href == 0){
 
@@ -182,7 +182,7 @@ sub update_common_studies{
 
   foreach my $study_id (keys %common_studies_to_be_updated){
 
-    my $study_obj = AEStudy->new($study_id,$plant_names_AE_response_href);
+    my $study_obj = EGPlantTHs::AEStudy->new($study_id,$plant_names_AE_response_href);
 
     my $sample_ids_href = $study_obj->get_sample_ids();
     if(!$sample_ids_href){  # there are cases where the AE API returns a study with the the sample_ids field to be null , I want to skip these studies
@@ -269,7 +269,7 @@ sub create_new_studies_in_incremental_update{
         next;
       }
     }
-    my $study_obj = AEStudy->new($study_id,$plant_names_AE_response_href);
+    my $study_obj = EGPlantTHs::AEStudy->new($study_id,$plant_names_AE_response_href);
 
     my $sample_ids_href = $study_obj->get_sample_ids();
     if(!$sample_ids_href){  # there are cases where the AE API returns a study with the the sample_ids field to be null , I want to skip these studies
@@ -360,7 +360,7 @@ sub get_study_ids_to_be_updated{ # gets a list of common study ids and decides w
 
   foreach my $common_study_id (@$common_study_ids_array_ref){ 
 
-    my $study_obj = AEStudy->new($common_study_id,$plant_names_AE_response_href);
+    my $study_obj = EGPlantTHs::AEStudy->new($common_study_id,$plant_names_AE_response_href);
 
     my $AE_last_processed_unix_time = $study_obj->get_AE_last_processed_unix_date; # AE current response: the unix date of the creation the cram of the study (gives me the max date of all bioreps of the study)
     my $registry_study_created_date_unix_time = eval { $registry_obj->get_Registry_hub_last_update($common_study_id) }; # date of registration of the study
@@ -491,7 +491,7 @@ sub print_registered_TH_in_THR_stats_after_pipeline_is_run{
       foreach my $study_id (keys %{$unsuccessful_studies_href->{$reason}}){
 
         $count_skipped_studies++;
-        my $study_obj = AEStudy->new($study_id,$plant_names_AE_response_href);
+        my $study_obj = EGPlantTHs::AEStudy->new($study_id,$plant_names_AE_response_href);
         my %bioreps_hash = %{$study_obj->get_biorep_ids};
         print $count_skipped_studies. ". ". $study_id. " (".scalar (keys %bioreps_hash)." bioreps)\t$reason\n";
       }
@@ -560,7 +560,7 @@ sub run_pipeline_from_scratch_with_logging{
 
   foreach my $study_id (keys %{$study_ids_href_AE}){
 
-    my $study_obj = AEStudy->new($study_id,$plant_names_AE_response_href);
+    my $study_obj = EGPlantTHs::AEStudy->new($study_id,$plant_names_AE_response_href);
 
     my $sample_ids_href = $study_obj->get_sample_ids();
     if(!$sample_ids_href){  # there are cases where the AE API returns a study with the the sample_ids field to be null , I want to skip these studies
@@ -599,7 +599,7 @@ sub give_hashes_with_AE_current_stats{
  
   foreach my $study_id (keys %{$study_ids_href_AE}){
 
-    my $study_obj = AEStudy->new($study_id,$plant_names_AE_response_href );
+    my $study_obj = EGPlantTHs::AEStudy->new($study_id,$plant_names_AE_response_href );
 
     my %biorep_ids = %{$study_obj->get_biorep_ids};
 
@@ -706,7 +706,7 @@ sub get_list_of_all_AE_plant_studies_currently{
 
   my $plant_names_href_EG = EG::get_plant_names;
   
-  my $study_ids_href = ArrayExpress::get_completed_study_ids_for_plants($plant_names_href_EG);
+  my $study_ids_href = EGPlantTHs::ArrayExpress::get_completed_study_ids_for_plants($plant_names_href_EG);
 
   return $study_ids_href;
 }
