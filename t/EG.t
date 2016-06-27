@@ -4,20 +4,22 @@ use Test::Exception;
 #use Devel::Cover;
 use Capture::Tiny ':all';
 
+use FindBin;
+use lib $FindBin::Bin . '/../modules';
 
 # -----
 # checks if the module can load
 # -----
 
 #test1
-use_ok(EG);  # it checks if it can use the module correctly
+use_ok(EGPlantTHs::EG);  # it checks if it can use the module correctly
 
 #test2
-use_ok(JsonResponse);  # it checks if it can use the module correctly
+use_ok(EGPlantTHs::JsonResponse);  # it checks if it can use the module correctly
 
 #test3
 my $ens_genomes_plants_call = "http://rest.ensemblgenomes.org/info/genomes/division/EnsemblPlants?content-type=application/json";
-my $json_response_aref = JsonResponse::get_Json_response($ens_genomes_plants_call);  
+my $json_response_aref = EGPlantTHs::JsonResponse::get_Json_response($ens_genomes_plants_call);  
 
 foreach my $hash_ref (@$json_response_aref){
   foreach my $key (keys(%$hash_ref)){
@@ -32,7 +34,7 @@ foreach my $hash_ref (@$json_response_aref){
 # -----
 
 #test4
-my $plant_names_href=EG::get_plant_names();
+my $plant_names_href=EGPlantTHs::EG::get_plant_names();
 ok(exists $plant_names_href->{arabidopsis_thaliana} ,"Arabidopsis_thaliana exists in the REST response");
 
 # -----
@@ -40,16 +42,16 @@ ok(exists $plant_names_href->{arabidopsis_thaliana} ,"Arabidopsis_thaliana exist
 # -----
 
 #test5
-my $assembly_name = EG::get_assembly_name_using_species_name("triticum_aestivum");
+my $assembly_name = EGPlantTHs::EG::get_assembly_name_using_species_name("triticum_aestivum");
 is($assembly_name,"IWGSC1+popseq", "Triticum aestivum has the exprected assembly name");
 
 #test6
-$assembly_name = EG::get_assembly_name_using_species_name("arabidopsis_thaliana");
+$assembly_name = EGPlantTHs::EG::get_assembly_name_using_species_name("arabidopsis_thaliana");
 is($assembly_name,"TAIR10", "Arabidopsis thaliana has the exprected assembly name");
 
 #test7
 my ($stdout, $stderr, $assembly_name_unknown) = capture {
-  EG::get_assembly_name_using_species_name("arabidopsis_thalian");
+  EGPlantTHs::EG::get_assembly_name_using_species_name("arabidopsis_thalian");
 };
 
 is($assembly_name_unknown,"unknown", "Returns \"unknown\" as an assembly name to a non-existent species name");
@@ -62,7 +64,7 @@ ok($stderr=~/The species name: \w+ is not in EG REST response/,'got the expected
 # -----
 
 #test9
-my $species_name_assembly_id_href=EG::get_species_name_assembly_id_hash();
+my $species_name_assembly_id_href=EGPlantTHs::EG::get_species_name_assembly_id_hash();
 is($species_name_assembly_id_href->{triticum_aestivum}, "0000", "Triticum aestivum has the exprected assembly id");
 
 #test10

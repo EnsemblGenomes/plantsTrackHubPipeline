@@ -2,12 +2,15 @@
 use Test::More;
 use Capture::Tiny ':all';
 
+use FindBin;
+use lib $FindBin::Bin . '/../modules';
+
 # -----
 # checks if the module can load
 # -----
 
 #test1
-use_ok(ENA);  # it checks if it can use the module correctly
+use_ok(EGPlantTHs::ENA);  # it checks if it can use the module correctly
 
 #test2
 use_ok(LWP::UserAgent);  # it checks if it can use the module correctly
@@ -20,11 +23,11 @@ use_ok(XML::LibXML);  # it checks if it can use the module correctly
 # -----
 
 #test4
-my $study_title=ENA::get_ENA_study_title("DRP000315");
+my $study_title=EGPlantTHs::ENA::get_ENA_study_title("DRP000315");
 is($study_title,"Oryza sativa Japonica Group transcriptome sequencing", "ENA title of study DRP000315 is as expected");
 
 #test5
-my $study_title_wrong_study_title=ENA::get_ENA_study_title("DRP0003");
+my $study_title_wrong_study_title=EGPlantTHs::ENA::get_ENA_study_title("DRP0003");
 is($study_title_wrong_study_title,"not yet in ENA", "not yet in ENA repsonse when giving wrong study id..");
 
 # -----
@@ -32,8 +35,8 @@ is($study_title_wrong_study_title,"not yet in ENA", "not yet in ENA repsonse whe
 # -----
 
 #test6
-my $sample_title = ENA::get_ENA_title("SAMN02666886");
-is($sample_title,"Arabidopsis thaliana; Arabidopsis thaliana Bur-0 X Col-0 seedling, biological replicate 1", "ENA title of sample SAMN02666886 is as expected");
+my $sample_title = EGPlantTHs::ENA::get_ENA_title("SAMN02666886");
+is($sample_title,"Arabidopsis thaliana Bur-0 X Col-0 seedling, biological replicate 1", "ENA title of sample SAMN02666886 is as expected");
 
 #test7
 my $sample_title_wrong_sample_title = ENA::get_ENA_title("SAMN0266688");
@@ -41,7 +44,7 @@ is($sample_title_wrong_sample_title,"not yet in ENA", "not yet in ENA response w
 
 #test8
 my ($stdout, $stderr,$sample_title_wrong_sample_title) = capture { 
-  ENA::get_ENA_title("SAMN03782116");
+  EGPlantTHs::ENA::get_ENA_title("SAMN03782116");
 };
 
 is($sample_title_wrong_sample_title,0, "no title found for sample SAMN03782116");
@@ -54,7 +57,7 @@ is($stderr,"I could not get a node from the xml doc of TITLE for sample/run/expe
 # -----
 
 #test10
-my $meta_keys_aref = ENA::get_all_sample_keys(); # array ref that has all the keys for the ENA warehouse metadata
+my $meta_keys_aref = EGPlantTHs::ENA::get_all_sample_keys(); # array ref that has all the keys for the ENA warehouse metadata
 my %meta_keys_hash = map{$_ => 1} @$meta_keys_aref;
 
 my @meta_keys_to_test=("accession", "cell_line","cell_type","tax_id","tissue_type","sex");
@@ -70,7 +73,7 @@ foreach my $meta_key (@meta_keys_to_test) {
 
 my $sample_id="SAMN02666886";
 
-my $sample_metadata_href=ENA::get_sample_metadata_response_from_ENA_warehouse_rest_call($sample_id,$meta_keys_aref);
+my $sample_metadata_href=EGPlantTHs::ENA::get_sample_metadata_response_from_ENA_warehouse_rest_call($sample_id,$meta_keys_aref);
 
 #test16
 ok(exists $sample_metadata_href->{scientific_name}, "\'scientific_name\' exists as a key");
@@ -84,7 +87,18 @@ is($sample_metadata_href->{scientific_name}, "Arabidopsis thaliana", "scientic n
 # -----
 
 #test18
-my $url=ENA::create_url_for_call_sample_metadata("SAMN02666886",$meta_keys_aref);
+my $url=EGPlantTHs::ENA::create_url_for_call_sample_metadata("SAMN02666886",$meta_keys_aref);
 like($url , qr/^http:\/\/www.ebi.ac.uk\/ena\/data\/.+accession=SAMN02666886.+sex.+tax_id.*/, "REST url to get ENA metadata is as expected");
+
+
+
+# -----
+# test give_big_data_file_type method
+# -----
+
+#test19
+my $url_ena="http://ftp.sra.ebi.ac.uk/vol1/ERZ285/ERZ285703/SRR3019819.cram";
+my $file_type = EGPlantTHs::ENA::give_big_data_file_type($url_ena);
+is($file_type, "cram", "big data file type is as expected");
 
 done_testing();

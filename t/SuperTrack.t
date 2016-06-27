@@ -4,27 +4,29 @@ use Test::File;
 use Test::Exception;
 #use Devel::Cover;
 
+use FindBin;
+use lib $FindBin::Bin . '/../modules';
 
 # -----
 # checks if the module can load
 # -----
 
 #test1
-use_ok(SuperTrack);  # it checks if it can use the module correctly
+use_ok(EGPlantTHs::SuperTrack);  # it checks if it can use the module correctly
 
 
 # -----
 # test constructor
 # -----
 
-my $st_obj=SuperTrack->new("SRP045759","long label here","metadata here");
+my $st_obj=EGPlantTHs::SuperTrack->new("SRP045759","long label here","metadata here");
 
 # test2
 isa_ok($st_obj,'SuperTrack','checks whether the object constructed is of my class type');
 
 
 # test3
-dies_ok(sub{SuperTrack->new("blabla")},'checks if wrong object construction of my class dies');
+dies_ok(sub{EGPlantTHs::SuperTrack->new("blabla")},'checks if wrong object construction of my class dies');
 
 
 # -----
