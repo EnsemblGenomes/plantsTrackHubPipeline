@@ -48,7 +48,7 @@ use_ok(EGPlantTHs::ArrayExpress);  # it checks if it can use the module correctl
 #test11
 my $trackHubCreator_obj = EGPlantTHs::TrackHubCreation->new("DRP000391" ,"/homes/tapanari" );
 
-isa_ok($trackHubCreator_obj,'TrackHubCreation','checks whether the object constructed is of my class type');
+isa_ok($trackHubCreator_obj,'EGPlantTHs::TrackHubCreation','checks whether the object constructed is of my class type');
 
 #test12
 dies_ok(sub{EGPlantTHs::TrackHubCreation->new("DRP000391")},'checks if wrong object construction of my class dies');

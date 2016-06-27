@@ -22,7 +22,7 @@ use_ok(EGPlantTHs::SuperTrack);  # it checks if it can use the module correctly
 my $st_obj=EGPlantTHs::SuperTrack->new("SRP045759","long label here","metadata here");
 
 # test2
-isa_ok($st_obj,'SuperTrack','checks whether the object constructed is of my class type');
+isa_ok($st_obj,'EGPlantTHs::SuperTrack','checks whether the object constructed is of my class type');
 
 
 # test3

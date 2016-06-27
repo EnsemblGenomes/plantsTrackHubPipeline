@@ -22,7 +22,7 @@ use_ok(EGPlantTHs::SubTrack);  # it checks if it can use the module correctly
 my $st_obj=EGPlantTHs::SubTrack->new("SRR351196","SAMN00728445","bigdata url","short label" ,"long label", "cram", "on");
 
 # test2
-isa_ok($st_obj,'SubTrack','checks whether the object constructed is of my class type');
+isa_ok($st_obj,'EGPlantTHs::SubTrack','checks whether the object constructed is of my class type');
 
 
 # test3
