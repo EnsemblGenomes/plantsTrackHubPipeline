@@ -1,4 +1,4 @@
-package SuperTrack;
+package EGPlantTHs::SuperTrack;
 
 use strict;
 use warnings;

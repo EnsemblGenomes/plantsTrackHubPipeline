@@ -1,13 +1,13 @@
-package ArrayExpress;
+package EGPlantTHs::ArrayExpress;
 
 use strict ;
 use warnings;
 
-use JsonResponse;
+use EGPlantTHs::JsonResponse;
 
 #my $array_express_url =  "http://plantain:3000/json/70";   # AE private server if the REST URLs
 
-my $array_express_url =  "http://www.ebi.ac.uk/fg/rnaseq/api/json/70";   # AE public server if the REST URLs
+my $array_express_url =  "http://www.ebi.ac.uk/fg/rnaseq/api/json/70";   # AE public server of the REST URLs
 
 sub get_plant_names_AE_API {  # returns reference to a hash
 
@@ -20,7 +20,7 @@ sub get_plant_names_AE_API {  # returns reference to a hash
 #{"ORGANISM":"arabidopsis_kamchatica","REFERENCE_ORGANISM":"arabidopsis_lyrata"},{"ORGANISM":"arabidopsis_lyrata","REFERENCE_ORGANISM":"arabidopsis_lyrata"},
 #{"ORGANISM":"arabidopsis_lyrata_subsp._lyrata","REFERENCE_ORGANISM":"arabidopsis_lyrata"},{"ORGANISM":"arabidopsis_thaliana","REFERENCE_ORGANISM":"arabidopsis_thaliana"},
 
-  my $json_response = JsonResponse::get_Json_response($url); 
+  my $json_response = EGPlantTHs::JsonResponse::get_Json_response($url); 
   
   if(!$json_response){ # if response is 0
 
@@ -44,7 +44,7 @@ sub get_runs_json_for_study { # returns json string or 0 if url not valid
   my $study_id = shift;
   my $url = $array_express_url . "/getRunsByStudy/$study_id";  # get an error here , $study_id is empty
 
-  return JsonResponse::get_Json_response( $url);
+  return EGPlantTHs::JsonResponse::get_Json_response( $url);
 
 }
 
@@ -59,7 +59,7 @@ sub get_completed_study_ids_for_plants{ # I want this method to return only stud
   foreach my $plant_name (keys %{$plant_names_href_EG}){
 
     $url = $get_runs_by_organism_endpoint . $plant_name;
-    my $json_response = JsonResponse::get_Json_response( $url);
+    my $json_response = EGPlantTHs::JsonResponse::get_Json_response( $url);
 
     if(!$json_response){ # if response is 0
 
@@ -88,7 +88,7 @@ sub get_study_ids_for_plant{
   my %study_ids;
 #response:
 #[{"STUDY_ID":"DRP000315","SAMPLE_IDS":"SAMD00009892","BIOREP_ID":"DRR000749","RUN_IDS":"DRR000749","ORGANISM":"oryza_sativa_japonica_group","REFERENCE_ORGANISM":"oryza_sativa","STATUS":"Complete","ASSEMBLY_USED":"IRGSP-1.0","ENA_LAST_UPDATED":"Fri Jun 19 2015 17:39:45","LAST_PROCESSED_DATE":"Mon Sep 07 2015 00:39:36","FTP_LOCATION":"ftp://ftp.ebi.ac.uk/pub/databases/arrayexpress/data/atlas/rnaseq/DRR000/DRR000749/DRR000749.cram","MAPPING_QUALITY":70},
-  my $json_response = JsonResponse::get_Json_response($url); 
+  my $json_response = EGPlantTHs::JsonResponse::get_Json_response($url); 
   
   if(!$json_response){ # if response is 0
 

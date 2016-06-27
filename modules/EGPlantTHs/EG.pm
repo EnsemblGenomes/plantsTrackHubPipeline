@@ -1,11 +1,11 @@
-package EG;
+package EGPlantTHs::EG;
 
 # this module is written in order to have a method that returns the right assembly name in the cases where AE gives the assembly accession instead of the assembly name (due to our bug)
 
 use strict ;
 use warnings;
 
-use JsonResponse;
+use EGPlantTHs::JsonResponse;
 
 my $ens_genomes_plants_call = "http://rest.ensemblgenomes.org/info/genomes/division/EnsemblPlants?content-type=application/json"; # to get all ensembl plants names currently
 
@@ -14,7 +14,7 @@ my $ens_genomes_plants_call = "http://rest.ensemblgenomes.org/info/genomes/divis
 
 my @array_response_plants_assemblies; 
 
-my $json_response = JsonResponse::get_Json_response($ens_genomes_plants_call);  
+my $json_response = EGPlantTHs::JsonResponse::get_Json_response($ens_genomes_plants_call);  
 
 if(!$json_response){ # if response is 0
 

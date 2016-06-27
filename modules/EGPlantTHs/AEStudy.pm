@@ -1,12 +1,12 @@
-package AEStudy;
+package EGPlantTHs::AEStudy;
 
 use strict;
 use warnings;
 
 use Date::Manip;
-use EG;
-use ArrayExpress;
-use ENA;
+use EGPlantTHs::EG;
+use EGPlantTHs::ArrayExpress;
+use EGPlantTHs::ENA;
 
 ## this is a class of an AE study. It considers only PLANT species.
 # AE REST call: http://www.ebi.ac.uk/fg/rnaseq/api/json/70/getRunsByStudy/SRP068911
@@ -37,13 +37,13 @@ sub make_runs_tuple_plants_of_study {
   my $self = shift;
 
   my $study_id = $self->{study_id};
-  my $plant_names_response_href = $self->{plant_names}; # ArrayExpress::get_plant_names_AE_API();
+  my $plant_names_response_href = $self->{plant_names}; # EGPlantTHs::ArrayExpress::get_plant_names_AE_API();
 
   my %run_tuple; # to be returned
 
   my %plant_names_AE = %{$plant_names_response_href};  # gives all distinct plant names with processed runs by AE
   
-  my $runs_response = ArrayExpress::get_runs_json_for_study($study_id);
+  my $runs_response = EGPlantTHs::ArrayExpress::get_runs_json_for_study($study_id);
   my @runs_json; # returns list of hash references
 
   if ($runs_response ==0){

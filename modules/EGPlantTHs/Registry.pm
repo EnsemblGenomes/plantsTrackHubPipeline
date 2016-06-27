@@ -1,4 +1,4 @@
-package Registry;
+package EGPlantTHs::Registry;
 
 use strict;
 use warnings;

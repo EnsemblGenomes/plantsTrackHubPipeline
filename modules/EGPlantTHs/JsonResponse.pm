@@ -1,4 +1,4 @@
-package JsonResponse;
+package EGPlantTHs::JsonResponse;
 
 use strict ;
 use warnings;
