@@ -159,6 +159,9 @@ if($study_ids_file_content){
 
   print "\nAfter the updates:\n";
   print_registry_registered_number_of_th($registry_obj);
+  print "\nThere are in total ". give_number_of_dirs_in_ftp($server_dir_full_path). " files in the ftp server\n\n";
+
+  print_run_duration_so_far($start_time);
 
 
   $| = 1; 
@@ -226,10 +229,11 @@ sub make_register_THs_with_logging{
     if($script_output !~ /..Done/){  # if for some reason the track hub didn't manage to be made in the server, it shouldn't be registered in the Registry, for example Robert gives me a study id as completed that is not yet in ENA
 
       print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id will be deleted\n\n" ;
-      print "\t..Skipping registration part\n";
 
       if ($flag_new_or_update eq "update"){ # if the track hub is already registered but in the process of re-creating it smt went wrong with its creation so I removed it from the server, I have to rm it from the THR too
         $registry_obj->delete_track_hub($study_id);
+      }else{
+        print "\t..Skipping registration part\n";
       }
 
       Helper::run_system_command("rm -r $server_dir_full_path/$study_id")      
@@ -364,4 +368,24 @@ sub get_assembly_names_assembly_ids_string_for_study{
   }
 
   return $assemblyNames_assemblyAccesions_string;
+}
+
+
+sub give_number_of_dirs_in_ftp {
+
+  my $ftp_location = shift;
+  
+  my @files = `ls $ftp_location` ;
+  
+  return  scalar @files;
+}
+
+sub print_run_duration_so_far{
+
+  my $start_run = shift;
+
+  my $end_run = time();
+  my $run_time = $end_run - $start_run;
+
+  print "\nRun time was $run_time seconds (". $run_time/3600 ." hours)\n";
 }

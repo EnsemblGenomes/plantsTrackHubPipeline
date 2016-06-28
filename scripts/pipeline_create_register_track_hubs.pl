@@ -24,7 +24,7 @@ use EGPlantTHs::Registry;
 use EGPlantTHs::TrackHubCreation;
 use EGPlantTHs::Helper;
 use Data::Dumper;
-use EGPlantTHs::ENA;
+use EGPlantTHs::ENA; # REMOVE?
 use EGPlantTHs::ArrayExpress;
 use EGPlantTHs::AEStudy;
 
@@ -75,7 +75,7 @@ my $start_run = time();
 
   my $study_ids_href_AE = get_list_of_all_AE_plant_studies_currently(); #  gets all Array Express current plant study ids
 
-  my $organism_assmblAccession_EG_href = EG::get_species_name_assembly_id_hash(); #$hash{"brachypodium_distachyon"} = "GCA_000005505.1"         also:  $hash{"oryza_rufipogon"} = "0000"
+  my $organism_assmblAccession_EG_href = EGPlantTHs::EG::get_species_name_assembly_id_hash(); #$hash{"brachypodium_distachyon"} = "GCA_000005505.1"         also:  $hash{"oryza_rufipogon"} = "0000"
   
   if ($from_scratch){
 
@@ -211,6 +211,7 @@ sub update_common_studies{
     my $reason_of_unsuccessful_study;
     ($reason_of_unsuccessful_study,$study_counter) = make_and_register_track_hub($study_obj,$registry_obj,$old_study_counter, $server_dir_full_path,$organism_assmblAccession_EG_href ,$plant_names_AE_response_href); 
     if($reason_of_unsuccessful_study ne "successful_study"){
+      $registry_obj->delete_track_hub($study_id);
       $unsuccessful_studies_href->{$reason_of_unsuccessful_study}{$study_id}=1;
     }
 
@@ -284,6 +285,7 @@ sub create_new_studies_in_incremental_update{
     my $return_reason_of_unsuccessful_study;
     ($return_reason_of_unsuccessful_study,$study_counter) = make_and_register_track_hub($study_obj,$registry_obj,$old_study_counter, $server_dir_full_path,$organism_assmblAccession_EG_href, $plant_names_AE_response_href ); 
     if($return_reason_of_unsuccessful_study ne "successful_study"){
+      print "\t..Skipping registration part\n";
       $unsuccessful_studies_href->{$return_reason_of_unsuccessful_study}{$study_id}=1;
     }
 
@@ -704,7 +706,7 @@ sub print_registry_registered_number_of_th{
 
 sub get_list_of_all_AE_plant_studies_currently{
 
-  my $plant_names_href_EG = EG::get_plant_names;
+  my $plant_names_href_EG = EGPlantTHs::EG::get_plant_names;
   
   my $study_ids_href = EGPlantTHs::ArrayExpress::get_completed_study_ids_for_plants($plant_names_href_EG);
 
@@ -735,7 +737,6 @@ sub make_and_register_track_hub{
   if($script_output !~ /..Done/){  # if for some reason the track hub didn't manage to be made in the server, it shouldn't be registered in the Registry, for example Robert gives me a study id as completed that is not yet in ENA
 
     print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id will be deleted\n\n" ;
-    print "\t..Skipping registration part\n";
 
     EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id")      
       or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
