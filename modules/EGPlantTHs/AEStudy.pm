@@ -4,9 +4,9 @@ use strict;
 use warnings;
 
 use Date::Manip;
-use EGPlantTHs::EG;
+#use EGPlantTHs::EG; #remove?
 use EGPlantTHs::ArrayExpress;
-use EGPlantTHs::ENA;
+#use EGPlantTHs::ENA; #remove?
 
 ## this is a class of an AE study. It considers only PLANT species.
 # AE REST call: http://www.ebi.ac.uk/fg/rnaseq/api/json/70/getRunsByStudy/SRP068911
@@ -133,6 +133,7 @@ sub get_organism_names_assembly_names{
 sub get_sample_ids{
 
   my $self = shift;
+  my $assembly_name = shift;
 
   my $run_tuple = $self->{run_tuple};
   my %sample_ids;
@@ -140,7 +141,11 @@ sub get_sample_ids{
   my %biorep_ids = %{$self->get_biorep_ids};
 
   foreach my $biorep_id (keys %biorep_ids){
-   
+
+    if($assembly_name){
+      next unless $run_tuple->{$biorep_id}{"assembly_name"} eq $assembly_name;
+    }
+
     my $sample_ids_string = $run_tuple->{$biorep_id} {"sample_ids"};  # ie $run{"SRR1042754"}{"sample_ids"}="SAMN02434874,SAMN02434875" , could also be $run{"SRR1042754"}{"sample_ids"}= null
     if(!$sample_ids_string ){
       return 0;

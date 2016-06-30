@@ -5,8 +5,9 @@ use warnings;
 
 use Getopt::Long; # to use the options when calling the script
 use POSIX qw(strftime); # to get GMT time stamp
+
 use EGPlantTHs::ENA;
-use EGPlantTHs::EG; # remove?
+#use EGPlantTHs::EG; # remove?
 use EGPlantTHs::AEStudy;
 use EGPlantTHs::SubTrack;
 use EGPlantTHs::SuperTrack;
@@ -66,7 +67,6 @@ sub make_track_hub{ # main method, creates the track hub of a study in the folde
     if ($return_of_make_trackDbtxt_file eq "at least 1 cram file of the TH that was not found in ENA"){
       return "..Skipping this TH because at least 1 of the cram files of the TH is not yet in ENA\n";
     }
-    #$self->make_trackDbtxt_file($server_dir_full_path, $study_obj, $assembly_name);
   }
 
   return "..Done\n";
@@ -177,7 +177,7 @@ sub make_trackDbtxt_file{
   open(my $fh, '>', $trackDb_txt_file)
     or die "Error in ".__FILE__." line ".__LINE__." Could not open file '$trackDb_txt_file' $!";
 
-  my @sample_ids = keys %{$study_obj->get_sample_ids} ;
+  my @sample_ids = keys %{$study_obj->get_sample_ids($assembly_name)} ;
   if(scalar @sample_ids ==0){
     print STDERR "No samples found for study $study_id\n"; 
   }

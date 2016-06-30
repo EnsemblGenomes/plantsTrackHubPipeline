@@ -5,10 +5,12 @@ use warnings;
 
 use EGPlantTHs::JsonResponse;
 
-#my $array_express_url =  "http://plantain:3000/json/70";   # AE private server if the REST URLs
+#my $array_express_url =  "http://plantain:3000/json/70";   # AE private server of the REST URLs
 
 my $array_express_url =  "http://www.ebi.ac.uk/fg/rnaseq/api/json/70";   # AE public server of the REST URLs
 
+# On success: return a hash with keys = plant_names
+# On failure: return undef
 sub get_plant_names_AE_API {  # returns reference to a hash
 
   my $url = $array_express_url . "/getOrganisms/plants" ; # gives all distinct plant names with processed runs by ENA
@@ -42,10 +44,15 @@ sub get_plant_names_AE_API {  # returns reference to a hash
 sub get_runs_json_for_study { # returns json string or 0 if url not valid
   
   my $study_id = shift;
-  my $url = $array_express_url . "/getRunsByStudy/$study_id";  # get an error here , $study_id is empty
+   
+  if(defined $study_id){
 
-  return EGPlantTHs::JsonResponse::get_Json_response( $url);
+    my $url = $array_express_url . "/getRunsByStudy/$study_id";  # get an error here , $study_id is empty
+    return EGPlantTHs::JsonResponse::get_Json_response( $url);
 
+  } else{
+    return;
+  }
 }
 
 sub get_completed_study_ids_for_plants{ # I want this method to return only studies with status "Complete"
