@@ -21,6 +21,7 @@ use EGPlantTHs::TrackHubCreation;
 use EGPlantTHs::AEStudy;
 use EGPlantTHs::Registry;
 use EGPlantTHs::EG;
+use EGPlantTHs::Helper;
 
 my $registry_user_name = $ENV{'THR_USER'}; 
 my $registry_pwd = $ENV{'THR_PWD'};
@@ -120,7 +121,7 @@ if($study_ids_file_content){
 
     print "\nThis directory: $server_dir_full_path does not exist, I will make it now.\n";
 
-    Helper::run_system_command("mkdir $server_dir_full_path")
+    EGPlantTHs::Helper::run_system_command("mkdir $server_dir_full_path")
       or die "I cannot make dir $server_dir_full_path in script: ".__FILE__." line: ".__LINE__."\n";
   }
 
@@ -209,7 +210,7 @@ sub make_register_THs_with_logging{
    
       print " (update) "; # if it already exists
       $flag_new_or_update = "update";
-      my $method_return= Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
+      my $method_return= EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
       if (!$method_return){ # returns 1 if successfully deleted or 0 if not, !($method_return is like $method_return=0)
         print STDERR "I cannot rm dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
         print STDERR "This study $study_id will be skipped";
@@ -236,7 +237,7 @@ sub make_register_THs_with_logging{
         print "\t..Skipping registration part\n";
       }
 
-      Helper::run_system_command("rm -r $server_dir_full_path/$study_id")      
+      EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id")      
         or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
 
       $line_counter --;
@@ -262,7 +263,7 @@ sub make_register_THs_with_logging{
       $return_string = $output;
 
       if($output !~ /is Registered/){# if something went wrong with the registration, i will not make a track hub out of this study
-        #Helper::run_system_command("rm -r $server_dir_full_path/$study_id")
+        #EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id")
          # or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
 
         $line_counter --;
