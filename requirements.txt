@@ -1,0 +1,14 @@
+Capture::Tiny
+Date::Manip
+LWP::UserAgent
+XML::LibXML
+HTTP::Tiny
+JSON
+HTTP::Request::Common
+DateTime
+Time::HiRes
+Time::Piece
+
+Test::JSON
+Test::HTTP::Response
+Test::File
