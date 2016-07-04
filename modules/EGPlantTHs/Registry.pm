@@ -318,14 +318,12 @@ sub get_Registry_hub_last_update { # gives the last update date(unix time) of th
 sub give_all_bioreps_of_study_from_Registry {
 
   my $self = shift;
-
   my $name = shift;  # track hub name, ie study_id
 
   defined $name
     or print "Track hub name parameter required to get the track hub's bioreps from the Track Hub Registry\n" and return 0;
 
-  my $registry_user_name= $self->{username};
-  
+  my $registry_user_name= $self->{username}; 
   my $auth_token = $self->{auth_token};
 
   my $request = GET("$server/api/trackhub/$name");
@@ -390,7 +388,80 @@ sub give_all_bioreps_of_study_from_Registry {
 
 }
 
-
+# 
+# sub give_assembly_ids_of_track_hub { # ASK ALESSANDRO HOW TO GET THE ASSEMBLIES OF THE TRACK HUB
+# 
+#   my $self = shift;
+#   my $name = shift;  # track hub name, ie study_id
+# 
+#   defined $name
+#     or print "Track hub name parameter required to get the track hub's assembly id from the Track Hub Registry\n" and return 0;
+# 
+#   my $registry_user_name= $self->{username};
+#   
+#   my $auth_token = $self->{auth_token};
+# 
+#   my $request = GET("https://www.trackhubregistry.org/api/info/assemblies");
+#   $request->headers->header(user       => $registry_user_name);
+#   $request->headers->header(auth_token => $auth_token);
+#   my $response = $ua->request($request);
+#   my $hub;
+# 
+#   if ($response->is_success) {
+# 
+#     $hub = from_json($response->content);
+# 
+#   } else {  
+# 
+#     print "\tCouldn't get Registered track hub $name with the first attempt when calling method give_assembly_id_of_track_hub in script ".__FILE__." reason " .$response->code ." , ". $response->content."\n";
+#     my $flag_success=0;
+# 
+#     for(my $i=1; $i<=10; $i++) {
+# 
+#       print "\t".$i .") Retrying attempt: Retrying after 5s...\n";
+#       sleep 5;
+#       $response = $ua->request($request);
+#       if($response->is_success){
+#         $hub = from_json($response->content);
+#         $flag_success =1 ;
+#         last;
+#       }
+#     }
+# 
+#     die "Couldn't get the track hub $name in the Registry when calling method give_assembly_id_of_track_hub in script: ".__FILE__." line ".__LINE__."\n"
+#     unless $flag_success==1;
+#   }
+# 
+#   die "Couldn't find hub $name in the Registry to get its runs when calling method give_assembly_id_of_track_hub in script: ".__FILE__." line ".__LINE__."\n" 
+#   unless $hub;
+# 
+#   my %assembly_ids ;
+# 
+#   foreach my $trackdb (@{$hub->{trackdbs}}) {
+# 
+#     $request = GET($trackdb->{uri});
+#     $request->headers->header(user       => $registry_user_name);
+#     $request->headers->header(auth_token => $auth_token);
+#     $response = $ua->request($request);
+#     my $doc;
+# 
+#     if ($response->is_success) {
+# 
+#       $doc = from_json($response->content);
+# 
+# 
+#       foreach my $sample (keys %{$doc->{configuration}}) {
+# 	map { $runs{$_}++ } keys %{$doc->{configuration}{$sample}{members}}; 
+#       }
+#     } else {  
+#       die "Couldn't get trackdb at ", $trackdb->{uri} , " from study $name in the Registry when trying to get all its runs, reason: " .$response->code ." , ". $response->content."\n";
+#     }
+#   }
+# 
+# 
+#   return \%assembly_ids;
+# 
+# }
 
 
 1;

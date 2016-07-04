@@ -4,9 +4,8 @@ use strict;
 use warnings;
 
 use Date::Manip;
-#use EGPlantTHs::EG; #remove?
 use EGPlantTHs::ArrayExpress;
-#use EGPlantTHs::ENA; #remove?
+
 
 ## this is a class of an AE study. It considers only PLANT species.
 # AE REST call: http://www.ebi.ac.uk/fg/rnaseq/api/json/70/getRunsByStudy/SRP068911

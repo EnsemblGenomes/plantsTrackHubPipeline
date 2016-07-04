@@ -7,7 +7,6 @@ use Getopt::Long; # to use the options when calling the script
 use POSIX qw(strftime); # to get GMT time stamp
 
 use EGPlantTHs::ENA;
-#use EGPlantTHs::EG; # remove?
 use EGPlantTHs::AEStudy;
 use EGPlantTHs::SubTrack;
 use EGPlantTHs::SuperTrack;
