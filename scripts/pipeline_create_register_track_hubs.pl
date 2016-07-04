@@ -23,8 +23,7 @@ use Time::Piece;
 use EGPlantTHs::Registry;
 use EGPlantTHs::TrackHubCreation;
 use EGPlantTHs::Helper;
-use Data::Dumper;
-use EGPlantTHs::ENA; # REMOVE?
+use EGPlantTHs::EG;
 use EGPlantTHs::ArrayExpress;
 use EGPlantTHs::AEStudy;
 
