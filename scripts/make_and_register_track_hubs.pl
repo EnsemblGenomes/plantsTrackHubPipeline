@@ -11,7 +11,8 @@
 
 use strict ;
 use warnings;
-
+use autodie;
+use File::Path qw(remove_tree);
 
 use FindBin;
 use lib $FindBin::Bin . '/../modules';
@@ -21,11 +22,9 @@ use EGPlantTHs::TrackHubCreation;
 use EGPlantTHs::AEStudy;
 use EGPlantTHs::Registry;
 use EGPlantTHs::EG;
-use EGPlantTHs::Helper;
 
 my $registry_user_name = $ENV{'THR_USER'}; 
 my $registry_pwd = $ENV{'THR_PWD'};
-
 
 defined $registry_user_name and $registry_pwd
   or die "Track Hub Registry username and password are required to be set as shell variables\n";
@@ -45,18 +44,31 @@ GetOptions(
   "server_url=s" => \$server_url,  
   "th_visibility=s" => \$track_hub_visibility,
   "file_location_of_study_ids_or_species=s" => \$file_location_of_study_ids_or_species,
-  "file_content_species_names"  => \$species_file_content,  # flag
+  "file_content_species_names"  => \$species_file_content,  # flag OR 
   "file_content_study_ids"  => \$study_ids_file_content  # flag
 
 );
 
-if(!$species_file_content and !$study_ids_file_content){
-  die "\nPlease give flag \"-file_content_species_names\" or \"-file_content_study_ids\" , depending on the content of the file \"$file_location_of_study_ids_or_species\" (does it have study ids or species names?)\n\n";
+if(!$server_dir_full_path){
+  die "Please specify where the track hubs should be made, run pipelinme using -server_dir_full_path option and value\n";
+}
+
+if(!$server_url){
+  die "Please give the url web location of the directory of the track hubs, run pipeline using -server_url option and value\n";
 }
 
 if(!$track_hub_visibility){
   die "\nPlease give TH visibility setting in the THR either hidden or public\n";
 }
+
+if(!$file_location_of_study_ids_or_species){
+  die "Please give full path of file with track hub ids or species names to be updated, run pipeline using -file_location_of_study_ids_or_species option and value"
+}
+
+if(!$species_file_content and !$study_ids_file_content){
+  die "\nPlease give flag \"-file_content_species_names\" or \"-file_content_study_ids\" , depending on the content of the file \"$file_location_of_study_ids_or_species\" (does it have study ids or species names?)\n\n";
+}
+
 
 my %study_ids;
 my %species_names;
@@ -82,7 +94,7 @@ if($study_ids_file_content){
 
 }else{  # the user will have species names in the text file
 
-  my %eg_species_names= %{EGPlantTHs::EG::get_plant_names()};
+  my %eg_species_names= %$plant_names_href_EG;
 
   while(<IN>){
     chomp;
@@ -121,8 +133,8 @@ if($study_ids_file_content){
 
     print "\nThis directory: $server_dir_full_path does not exist, I will make it now.\n";
 
-    EGPlantTHs::Helper::run_system_command("mkdir $server_dir_full_path")
-      or die "I cannot make dir $server_dir_full_path in script: ".__FILE__." line: ".__LINE__."\n";
+    mkdir $server_dir_full_path;
+
   }
 
   my $plant_names_AE_response_href = EGPlantTHs::ArrayExpress::get_plant_names_AE_API();
@@ -137,11 +149,12 @@ if($study_ids_file_content){
   print_registry_registered_number_of_th($registry_obj);
  
   my $unsuccessful_studies_href = make_register_THs_with_logging($registry_obj, \%study_ids , $server_dir_full_path, $organism_assmblAccession_EG_href,$plant_names_AE_response_href); 
-  my $counter=0;
 
   if(scalar (keys %$unsuccessful_studies_href) >0){
     print "\nThere were some studies that failed to be made track hubs:\n\n";
   }
+
+  my $counter=0;
 
   foreach my $reason_of_failure (keys %$unsuccessful_studies_href){  # hash looks like; $unsuccessful_studies{"Missing all Samples in AE REST API"}{$study_id}= 1;
 
@@ -151,8 +164,6 @@ if($study_ids_file_content){
       print "$counter. $failed_study_id\t".$reason_of_failure."\n";
     }
   }
-
-
 
   my $date_string2 = localtime();
   print " \n Finished creating the files,directories of the track hubs on the server on:\n";
@@ -168,7 +179,7 @@ if($study_ids_file_content){
   $| = 1; 
 
   if (scalar @obsolete_studies > 0){
-    print "\nObsolete studies list (not any more in AE) but still in THR, I haven't deleted them:\n";
+    print "\nObsolete studies list (not any more in AE) but still in THR and server, I haven't deleted them:\n";
     foreach my $obsolete_study (@obsolete_studies){
       print $obsolete_study."\n";
     }
@@ -206,16 +217,14 @@ sub make_register_THs_with_logging{
     my $ls_output = `ls $server_dir_full_path`  ;
     my $flag_new_or_update;
 
-    if($ls_output =~/$study_id/){ # i check if the directory of the study exists already
+    if($ls_output =~/$study_id/){ # i check if the directory of the study exists already, I want to replace the Track Hub or make a new one
    
       print " (update) "; # if it already exists
       $flag_new_or_update = "update";
-      my $method_return= EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
-      if (!$method_return){ # returns 1 if successfully deleted or 0 if not, !($method_return is like $method_return=0)
-        print STDERR "I cannot rm dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
-        print STDERR "This study $study_id will be skipped";
-        next;
-      }
+
+      my $study_dir = "$server_dir_full_path/$study_id";
+      remove_tree $study_dir if -d $study_dir; # I remove the track hub directory to make it again, updated now.
+      
     }else{
       $flag_new_or_update = "new";
       print " (new) ";
@@ -229,16 +238,17 @@ sub make_register_THs_with_logging{
 
     if($script_output !~ /..Done/){  # if for some reason the track hub didn't manage to be made in the server, it shouldn't be registered in the Registry, for example Robert gives me a study id as completed that is not yet in ENA
 
-      print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id will be deleted\n\n" ;
+      print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id is deleted from the server\n\n" ;
 
       if ($flag_new_or_update eq "update"){ # if the track hub is already registered but in the process of re-creating it smt went wrong with its creation so I removed it from the server, I have to rm it from the THR too
-        $registry_obj->delete_track_hub($study_id);
+
+        $registry_obj->delete_track_hub($study_id); # I want to remove this TH from the THR and delete it from the server if not successful
+
       }else{
         print "\t..Skipping registration part\n";
       }
 
-      EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id")      
-        or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
+      remove_tree "$server_dir_full_path/$study_id";
 
       $line_counter --;
 
@@ -263,11 +273,12 @@ sub make_register_THs_with_logging{
       $return_string = $output;
 
       if($output !~ /is Registered/){# if something went wrong with the registration, i will not make a track hub out of this study
-        #EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id")
-         # or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
+
+        remove_tree "$server_dir_full_path/$study_id";
 
         $line_counter --;
         $return_string = $return_string . "\t..Something went wrong with the Registration process -- this study will be skipped..\n";
+        print STDERR "Study $study_id could not be registered in the THR - Folder $study_id is deleted from the server\n";
         $unsuccessful_studies{"Registry issue"}{$study_id}= 1;
       }
 
@@ -284,7 +295,6 @@ sub print_calling_params_logging{
   
   my ($registry_user_name , $registry_pwd , $server_dir_full_path ,$server_url, $track_hub_visibility, $file_location_of_study_ids_or_species) = @_;
   my $date_string = localtime();
-
 
   print "* Using these shell variables of the THR account:\n\n";
   print " THR_USER=$registry_user_name\n THR_PWD=$registry_pwd\n\n";

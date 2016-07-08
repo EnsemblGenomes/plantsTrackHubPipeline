@@ -11,7 +11,8 @@
 
 use strict ;
 use warnings;
-
+use autodie;
+use File::Path qw(remove_tree);
 
 use FindBin;
 use lib $FindBin::Bin . '/../modules';
@@ -22,7 +23,6 @@ use Time::Piece;
 
 use EGPlantTHs::Registry;
 use EGPlantTHs::TrackHubCreation;
-use EGPlantTHs::Helper;
 use EGPlantTHs::EG;
 use EGPlantTHs::ArrayExpress;
 use EGPlantTHs::AEStudy;
@@ -47,6 +47,18 @@ GetOptions(
   "do_track_hubs_from_scratch"  => \$from_scratch  # flag
 );
 
+if(!$server_dir_full_path){
+  die "Please specify where the track hubs should be made, run pipelinme using -server_dir_full_path option and value\n";
+}
+
+if(!$server_url){
+  die "Please give the url web location of the directory of the track hubs, run pipeline using -server_url option and value\n";
+}
+
+if(!$track_hub_visibility){
+  die "\nPlease give TH visibility setting in the THR either hidden or public\n";
+}
+
 my $start_run = time();
 
 { # main method
@@ -59,8 +71,7 @@ my $start_run = time();
 
     print "\nThis directory: $server_dir_full_path does not exist, I will make it now.\n";
 
-    EGPlantTHs::Helper::run_system_command("mkdir $server_dir_full_path")
-      or die "I cannot make dir $server_dir_full_path in script: ".__FILE__." line: ".__LINE__."\n";
+    mkdir $server_dir_full_path;  # it dies when mkdir returns false
   }
 
   my $unsuccessful_studies_href;
@@ -175,7 +186,7 @@ sub update_common_studies{
   }else{
     print "\nStudies to be updated (".scalar (keys %common_studies_to_be_updated)." studies) from last time the pipeline was run:\n";
   }
-  print "\n\n";
+  print "\n";
 
   my $study_counter = 0;
 
@@ -200,10 +211,10 @@ sub update_common_studies{
 
     if($ls_output =~/$study_id/){ # i check if the directory was created
 
-      my $method_return= EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
-      if (!$method_return){ # returns 1 if successfully deleted or 0 if not, !($method_return is like $method_return=0)
-        print STDERR "I cannot rm dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
-      }
+      my $study_dir = "$server_dir_full_path/$study_id";
+
+      remove_tree $study_dir if -d $study_dir;
+
     }
     
     my $date_registry_last = localtime($registry_obj->get_Registry_hub_last_update($study_id))->strftime('%F %T');
@@ -259,14 +270,14 @@ sub create_new_studies_in_incremental_update{
 
   foreach my $study_id (@$new_study_ids_aref) {
 
-    my $ls_output = `ls $server_dir_full_path`  ;
-    if($ls_output =~/$study_id/){ # i check if the directory was created
+    my $ls_output = `ls $server_dir_full_path` ;
 
-      my $method_return= EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id");
-      if (!$method_return){ # returns 1 if successfully deleted or 0 if not, !($method_return is like $method_return=0)
-        print STDERR "I cannot rm dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
-        print STDERR "This study $study_id will be skipped";
-        next;
+    if($ls_output =~/$study_id/){ # i check if the directory exists for some reason
+
+      my $study_dir = "$server_dir_full_path/$study_id";
+
+      if(-d $study_dir){
+        remove_tree $study_dir if -d $study_dir;
       }
     }
     my $study_obj = EGPlantTHs::AEStudy->new($study_id,$plant_names_AE_response_href);
@@ -282,7 +293,9 @@ sub create_new_studies_in_incremental_update{
     my $old_study_counter = $study_counter;
 
     my $return_reason_of_unsuccessful_study;
+
     ($return_reason_of_unsuccessful_study,$study_counter) = make_and_register_track_hub($study_obj,$registry_obj,$old_study_counter, $server_dir_full_path,$organism_assmblAccession_EG_href, $plant_names_AE_response_href ); 
+
     if($return_reason_of_unsuccessful_study ne "successful_study"){
       print "\t..Skipping registration part\n";
       $unsuccessful_studies_href->{$return_reason_of_unsuccessful_study}{$study_id}=1;
@@ -316,11 +329,11 @@ sub remove_obsolete_studies {
     foreach my $track_hub_id (@track_hubs_for_deletion){
 
       $registry_obj->delete_track_hub($track_hub_id) ; # it's an obsolete study- it needs deletion
-
-      my $method_return= EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$track_hub_id");
-      if (!$method_return){ # returns 1 if successfully deleted or 0 if not, !($method_return is like $method_return=0)
-        print STDERR "Could not remove obsolete track hub $track_hub_id in location $server_dir_full_path\n";
-      }
+ 
+      my $study_dir = "$server_dir_full_path/$track_hub_id";
+      
+      remove_tree $study_dir if -d $study_dir;
+      
     }
   }else{
 
@@ -520,26 +533,8 @@ sub delete_registered_th_and_remove_th_from_server{  # called only when option i
 
   print "\n ******** Deleting everything in directory $server_dir_full_path\n\n";
 
-  my ($successfully_ran_method,$ls_output) = EGPlantTHs::Helper::run_system_command_with_output("ls $server_dir_full_path");
+  remove_tree "$server_dir_full_path", { keep_root => 1 };   # removing the track hub files in the server/dir
 
-  if($successfully_ran_method ==0) { 
-
-    die "I cannot see contents of $server_dir_full_path(ls failed) in script: ".__FILE__." line: ".__LINE__."\n";
-  }
-
-  if($successfully_ran_method ==1 and (!($ls_output))){  # if dir is empty 
-
-    print "Directory $server_dir_full_path is empty - No need for deletion\n";
-  }
-
-  if($successfully_ran_method ==1 and ($ls_output)){ # directory is not empty, I will delete all its contents
-
-    EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/*")   # removing the track hub files in the server/dir
-      or die "ERROR: failed to remove contents of dir $server_dir_full_path in script: ".__FILE__." line: ".__LINE__."\n";
-
-    print "Successfully deleted all content of $server_dir_full_path\n";    
-
-  }
   $| = 1; 
 }
 
@@ -735,10 +730,9 @@ sub make_and_register_track_hub{
 
   if($script_output !~ /..Done/){  # if for some reason the track hub didn't manage to be made in the server, it shouldn't be registered in the Registry, for example Robert gives me a study id as completed that is not yet in ENA
 
-    print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id will be deleted\n\n" ;
+    print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id is deleted from the server\n\n" ;
 
-    EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id")      
-      or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
+    remove_tree "$server_dir_full_path/$study_id";
 
     $line_counter --;
 
@@ -764,11 +758,12 @@ sub make_and_register_track_hub{
     $return_string = $output;
 
     if($output !~ /is Registered/){# if something went wrong with the registration, i will not make a track hub out of this study
-      EGPlantTHs::Helper::run_system_command("rm -r $server_dir_full_path/$study_id")
-        or die "ERROR: failed to remove dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
+
+      remove_tree "$server_dir_full_path/$study_id";
 
       $line_counter --;
       $return_string = $return_string . "\t..Something went wrong with the Registration process -- this study will be skipped..\n";
+      print STDERR "Study $study_id could not be registered in the THR - Folder $study_id is deleted from the server\n";
 
       $return_reason_of_unsuccessful_study = "Registry issue";
 
