@@ -7,12 +7,13 @@ use LWP::UserAgent;
 use XML::LibXML;
 use utf8;
 use DateTime::Format::Strptime;
+#use Bio::DB::HTS;
 
 my $ua = LWP::UserAgent->new;
 my $parser = XML::LibXML->new;
 
-my $all_cram_locations_href = get_hash_of_locations_of_cram_submissions();
-my $unique_cram_locations_href= get_last_updated_cram_file_location_hash ($all_cram_locations_href);
+my $all_cram_locations_href = get_hash_of_locations_of_cram_submissions();  # hash is like: hash{DRR008478"}{"TAIR10"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+my %unique_cram_locations= %{get_last_updated_cram_file_location_hash ($all_cram_locations_href)};  # hash is like: hash{DRR008478"}{"TAIR10"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
 
 sub get_ENA_study_title{  
 
@@ -287,11 +288,11 @@ sub get_hash_of_locations_of_cram_submissions{
 
   my $fake_study_id= "ERP014374"; # this is the study id that Christoph uses to submit the CRAM files to ENA. this study id includes all CRAM files that Chr. managed to submit to ENA from ArrayExpress.
 
-  my $url = "http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=ERP014374&result=analysis&fields=first_public,submitted_ftp&download=txt";
+  my $url = "http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=ERP014374&result=analysis&fields=last_updated,submitted_ftp,analysis_accession&download=txt";
 
-#first_public	submitted_ftp
-#2016-03-04	ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram
-#2016-03-11	ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270806/DRR016127.cram
+#last_updated	submitted_ftp
+#2016-03-04	ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram ERZ273205
+#2016-03-11	ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270806/DRR016127.cram ERZ277617
 
   my $response = $ua->get($url); 
 
@@ -299,12 +300,12 @@ sub get_hash_of_locations_of_cram_submissions{
 
   if($response->code != 200 or $response_string =~ /^ *$/ ){
 
-    print "\nCouldn't get submitted CRAM locations using $url with the first attempt, retrying..\n" ;
+    print STDERR "\nCouldn't get submitted CRAM locations using $url with the first attempt, retrying..\n" ;
 
     my $flag_success = 0 ;
     for(my $i=1; $i<=10; $i++) {
 
-      print $i .".Retrying attempt: Retrying after 5s...\n";
+      print STDERR $i .".Retrying attempt: Retrying after 5s...\n";
       sleep 5;
       $response = $ua->get($url);
 
@@ -329,76 +330,90 @@ sub get_hash_of_locations_of_cram_submissions{
     }
 
   }else{ # if there is proper response
-    
+
     my %cram_name_ena_location; # same cram file submitted more than once. It will have a different ftp location since the analysis id will be different and it is included in the ftp location url, i can only keep the most recent date
 
     my @lines= split(/\n/, $response_string);
     
-    foreach my $line (@lines){
+    foreach my $line (@lines){ # I am reading line-by-line the response, and make my hash table
 
-      next if ($line=~/^first/);
+      next if ($line=~/^last/); # i skip the title
       next if (!$line);
 
-#2016-03-04	ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram
+#2016-03-04	ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram  ERZ273205
       my @words= split(/\t/, $line);
-      next if(!$words[1]) or (!$words[0]);
+      my $date = $words[0];
+      my $cram_location = $words[1];
+      my $analysis_id = $words[2];
 
-      if($words[1] =~/.+\/(.+)\.cram/){   # the cram name could be of type : SRR2912853.cram or E-MTAB-4045.biorep85.cram
-    
-        $cram_name_ena_location{$1}{$words[0]}=$words[1]; # it would be $cram_name_ena_location{DRR008478"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
-        
+      next if(!$date) or (!$cram_location);  # goes to next line
+
+      if($cram_location =~/.+\/(.+)\.cram/){   # the cram name could be of type : SRR2912853.cram or E-MTAB-4045.biorep85.cram
+
+        my $assembly_name = get_assembly_name_from_analysis_XML_using_analysis_id($analysis_id);
+
+        if(!$assembly_name){
+          print STDERR "In method get_assembly_name_from_analysis_XML_using_analysis_id, module ENA.pm , line ".__LINE__." could not get the assembly name from the ENA XML file using analysis id $analysis_id"."\n";
+          return 0;      
+        }
+        $cram_name_ena_location{$1}{$assembly_name}{$date}=$cram_location; # it would be $cram_name_ena_location{DRR008478"}{"TAIR10"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+
       }else{
         print STDERR "In method get_hash_of_locations_of_cram_submissions, module ENA.pm , line ".__LINE__." could not get the cram name here $line in the regex\n";
+        return 0;
       }
     }
      
     return \%cram_name_ena_location;
+
   }
 }
 
 
 sub get_last_updated_cram_file_location_hash{
   
-  my $location_hash = shift; # the hash would be like this: $location_hash{DRR008478"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+  my $location_href = shift; # the hash would be like this: $location_hash{DRR008478"}{"TAIR10"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
   my %unique_cram_names_href;
   
-  foreach my $cram_name (keys %$location_hash){
+  foreach my $cram_name (keys %$location_href){
+    foreach my $assembly_name (keys %{$location_href->{$cram_name}}){
 
-    my $max_timestamp=0;
-    my $timestamp;
-    my $location_of_max_timestamp;
+      my $max_timestamp=0;
+      my $timestamp;
+      my $location_of_max_timestamp;
 
-    foreach my $date (keys %{$location_hash->{$cram_name}}){
+      foreach my $date (keys %{$location_href->{$cram_name}{$assembly_name}}){
 
-      my $strp = DateTime::Format::Strptime->new(
-      pattern => '%Y-%m-%d', #2016-03-04
-      time_zone => 'local',
-      );
-      my $dt = $strp->parse_datetime($date);
-      $timestamp=$dt->epoch;
+        my $strp = DateTime::Format::Strptime->new(
+        pattern => '%Y-%m-%d', #2016-03-04
+        time_zone => 'local',
+        );
+        my $dt = $strp->parse_datetime($date);
+        $timestamp=$dt->epoch;
 
-      if($timestamp > $max_timestamp){
+        if($timestamp > $max_timestamp){
 
-        $max_timestamp = $timestamp;
-        $location_of_max_timestamp = $location_hash->{$cram_name}{$date}; 
+          $max_timestamp = $timestamp;
+          $location_of_max_timestamp = $location_href->{$cram_name}{$assembly_name}{$date}; 
+        }
       }
-    }
 
-    $unique_cram_names_href{$cram_name}=$location_of_max_timestamp; #the hash would be like this: $unique_cram_names_href{DRR008478"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+      $unique_cram_names_href{$cram_name}{$assembly_name}=$location_of_max_timestamp; #the hash would be like this: $unique_cram_names_href{DRR008478"}{"TAIR10"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+    }
   }
 
   return \%unique_cram_names_href;
-
 }
 
-sub get_ENA_cram_location{
+sub get_ENA_cram_location_of_biorep_id_and_assembly_name{
 
   my $biorep_id = shift;
+  my $biorep_assembly_name = shift;
 
-  my $cram_locations_href = $unique_cram_locations_href; # $unique_cram_locations_href os global variable
+  my %cram_locations = %unique_cram_locations; # $unique_cram_locations_href is global variable
 
-  if($cram_locations_href->{$biorep_id}){
-    return $cram_locations_href->{$biorep_id};
+  if($cram_locations{$biorep_id}{$biorep_assembly_name}){
+    return $cram_locations{$biorep_id}{$biorep_assembly_name};
   }else{
     return 0;
   }
@@ -408,12 +423,61 @@ sub get_ENA_cram_location{
 
 sub give_big_data_file_type{
   
-  my $big_date_url = shift;
+  my $big_data_url = shift;
 
-  $big_date_url=~ /.+\/.+\.(.+)$/; #  http://ftp.sra.ebi.ac.uk/vol1/ERZ285/ERZ285703/SRR3019819.cram
+  $big_data_url=~ /.+\/.+\.(.+)$/; #  http://ftp.sra.ebi.ac.uk/vol1/ERZ285/ERZ285703/SRR3019819.cram
 
   return $1; # ie cram
 
+}
+
+
+sub get_assembly_name_from_analysis_XML_using_analysis_id {
+
+  my $analysis_id = shift ;
+
+  my $assembly_name ;
+
+  my $title;
+  my $filename;
+
+  my $url ="http://www.ebi.ac.uk/ena/data/view/$analysis_id&display=xml"; 
+
+  my $response = $ua->get($url); 
+  my $response_string;
+
+  if ($response->is_success) {
+    $response_string = $response->decoded_content;  
+  }
+  else {
+    print STDERR "Could not get response for call: $url in ENA module method get_assembly_name_from_analysis_XML_using_analysis_id, line ".__LINE__."\n";
+    return 0;
+  }
+  my $doc = $parser->parse_string($response_string);
+
+  if ($doc =~/display type is either not supported or entry is not found/){
+    return "not yet in ENA";
+  }
+
+  my @nodes = $doc->findnodes("//TITLE");
+
+  if(!@nodes){
+    print STDERR "I could not get a TITLE node from the xml doc $url\n";
+    return 0;   
+
+  }else{
+ 
+    $title = $nodes[0]->firstChild->data; #it's always 1 node
+    utf8::encode($title);
+    if($title =~/Alignment\sof\s.+\sto\s(.+)/){   #     <TITLE>Alignment of ERR072804 to AGPv3</TITLE>
+      $assembly_name = $1;
+    }else{
+      print STDERR "Could not find the assembly name in the TITLE node of the analysis id $analysis_id in ENA $url in module ENA.pm\n";
+      return 0;
+    }
+  }
+
+  return $assembly_name;
 }
 
 

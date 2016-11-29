@@ -10,7 +10,7 @@ use EGPlantTHs::JsonResponse;
 my $array_express_url =  "http://www.ebi.ac.uk/fg/rnaseq/api/json/70";   # AE public server of the REST URLs
 
 # On success: return a hash with keys = plant_names
-# On failure: return undef
+# On failure: return 0
 sub get_plant_names_AE_API {  # returns reference to a hash
 
   my $url = $array_express_url . "/getOrganisms/plants" ; # gives all distinct plant names with processed runs by ENA
@@ -47,17 +47,21 @@ sub get_runs_json_for_study { # returns json string or 0 if url not valid
    
   if(defined $study_id){
 
-    my $url = $array_express_url . "/getRunsByStudy/$study_id";  # get an error here , $study_id is empty
-    return EGPlantTHs::JsonResponse::get_Json_response( $url);
+    my $url = $array_express_url . "/getBiorepsByStudy/$study_id";  
+    return EGPlantTHs::JsonResponse::get_Json_response($url);
 
   } else{
-    return;
+    die __METHOD__ ." needs to be called with parameter study_id\n";
   }
 }
 
 sub get_completed_study_ids_for_plants{ # I want this method to return only studies with status "Complete"
 
   my $plant_names_href_EG = shift;
+
+  if(!$plant_names_href_EG){
+    die __METHOD__ ." needs to be called with parameter of a hash ref where the hash contains the plant names as keys.\n";
+  }
 
   my $url;
   my %study_ids;
@@ -91,6 +95,10 @@ sub get_study_ids_for_plant{
 
   my $plant_name = shift;
   my $url= $array_express_url."/getRunsByOrganism/" . $plant_name;
+
+  if(!$plant_name){
+    die __METHOD__ ." needs to be called with parameter of a plant name\n";
+  }
   
   my %study_ids;
 #response:
@@ -113,6 +121,39 @@ sub get_study_ids_for_plant{
 
     return \%study_ids;
 
+  }
+}
+
+sub get_all_recalled_study_ids {
+
+  my $plant_names_href_EG = shift;
+  my $url = $array_express_url."/getRecalledRuns";
+  my %recalled_study_ids;
+
+  if(!$plant_names_href_EG){
+    die __METHOD__ ." needs to be called with parameter of a hash ref where the hash contains the plant names as keys\n";
+  }
+ 
+#response:
+#[{"STUDY_ID":"DRP001347","SAMPLE_IDS":null,"BIOREP_ID":"DRR015062","RUN_IDS":"DRR015062","ORGANISM":"mus_musculus","REFERENCE_ORGANISM":"mus_musculus","STATUS":"Suppressed_in_ENA","ASSEMBLY_USED":"GRCm38","ENA_LAST_UPDATED":"Thu Dec 03 2015 01:17:20","LAST_PROCESSED_DATE":"Wed Jan 06 2016 07:33:15","CRAM_LOCATION":"NA","BEDGRAPH_LOCATION":"NA","BIGWIG_LOCATION":"NA","MAPPING_QUALITY":0},{"STUDY_ID":"DRP001347","SAMPLE_IDS":null,"BIOREP_ID":"DRR015063","RUN_IDS":"DRR015063","ORGANISM":"mus_
+
+  my $json_response = EGPlantTHs::JsonResponse::get_Json_response($url); 
+  
+  if(!$json_response){ # if response is 0
+
+    return 0;
+
+  }else{
+
+    my @json = @{$json_response}; # json response is a ref to an array that has hash refs
+
+    foreach my $hash_ref (@json){
+      if($plant_names_href_EG->{$hash_ref->{"REFERENCE_ORGANISM"}}){ # I want to get only the recalled studies of plants
+        $recalled_study_ids{ $hash_ref->{"STUDY_ID"}}=$hash_ref->{"REFERENCE_ORGANISM"};          
+      }
+    }
+
+    return \%recalled_study_ids;
   }
 }
 

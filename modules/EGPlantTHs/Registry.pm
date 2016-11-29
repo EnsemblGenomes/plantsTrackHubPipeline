@@ -6,6 +6,7 @@ use warnings;
 use JSON;
 use HTTP::Request::Common qw/GET DELETE POST/;
 use LWP::UserAgent;
+use EGPlantTHs::EG;
 
 my $server = "https://beta.trackhubregistry.org";
 my $ua = LWP::UserAgent->new;
@@ -338,7 +339,7 @@ sub give_all_bioreps_of_study_from_Registry {
 
   } else {  
 
-    print "\tCouldn't get Registered track hub $name with the first attempt when calling method give_all_runs_of_study_from_Registry in script ".__FILE__." reason " .$response->code ." , ". $response->content."\n";
+    print "\tCouldn't get Registered track hub $name with the first attempt when calling method give_all_bioreps_of_study_from_Registry in script ".__FILE__." reason " .$response->code ." , ". $response->content."\n";
     my $flag_success=0;
 
     for(my $i=1; $i<=10; $i++) {
@@ -353,11 +354,11 @@ sub give_all_bioreps_of_study_from_Registry {
       }
     }
 
-    die "Couldn't get the track hub $name in the Registry when calling method give_all_runs_of_study_from_Registry in script: ".__FILE__." line ".__LINE__."\n"
+    die "Couldn't get the track hub $name in the Registry when calling method give_all_runs_of_bioreps_from_Registry in script: ".__FILE__." line ".__LINE__."\n"
     unless $flag_success==1;
   }
 
-  die "Couldn't find hub $name in the Registry to get its runs when calling method give_all_runs_of_study_from_Registry in script: ".__FILE__." line ".__LINE__."\n" 
+  die "Couldn't find hub $name in the Registry to get its runs when calling method give_all_bioreps_of_study_from_Registry in script: ".__FILE__." line ".__LINE__."\n" 
   unless $hub;
 
   my %runs ;
@@ -388,80 +389,78 @@ sub give_all_bioreps_of_study_from_Registry {
 
 }
 
-# 
-# sub give_assembly_ids_of_track_hub { # ASK ALESSANDRO HOW TO GET THE ASSEMBLIES OF THE TRACK HUB
-# 
-#   my $self = shift;
-#   my $name = shift;  # track hub name, ie study_id
-# 
-#   defined $name
-#     or print "Track hub name parameter required to get the track hub's assembly id from the Track Hub Registry\n" and return 0;
-# 
-#   my $registry_user_name= $self->{username};
-#   
-#   my $auth_token = $self->{auth_token};
-# 
-#   my $request = GET("https://www.trackhubregistry.org/api/info/assemblies");
-#   $request->headers->header(user       => $registry_user_name);
-#   $request->headers->header(auth_token => $auth_token);
-#   my $response = $ua->request($request);
-#   my $hub;
-# 
-#   if ($response->is_success) {
-# 
-#     $hub = from_json($response->content);
-# 
-#   } else {  
-# 
-#     print "\tCouldn't get Registered track hub $name with the first attempt when calling method give_assembly_id_of_track_hub in script ".__FILE__." reason " .$response->code ." , ". $response->content."\n";
-#     my $flag_success=0;
-# 
-#     for(my $i=1; $i<=10; $i++) {
-# 
-#       print "\t".$i .") Retrying attempt: Retrying after 5s...\n";
-#       sleep 5;
-#       $response = $ua->request($request);
-#       if($response->is_success){
-#         $hub = from_json($response->content);
-#         $flag_success =1 ;
-#         last;
-#       }
-#     }
-# 
-#     die "Couldn't get the track hub $name in the Registry when calling method give_assembly_id_of_track_hub in script: ".__FILE__." line ".__LINE__."\n"
-#     unless $flag_success==1;
-#   }
-# 
-#   die "Couldn't find hub $name in the Registry to get its runs when calling method give_assembly_id_of_track_hub in script: ".__FILE__." line ".__LINE__."\n" 
-#   unless $hub;
-# 
-#   my %assembly_ids ;
-# 
-#   foreach my $trackdb (@{$hub->{trackdbs}}) {
-# 
-#     $request = GET($trackdb->{uri});
-#     $request->headers->header(user       => $registry_user_name);
-#     $request->headers->header(auth_token => $auth_token);
-#     $response = $ua->request($request);
-#     my $doc;
-# 
-#     if ($response->is_success) {
-# 
-#       $doc = from_json($response->content);
-# 
-# 
-#       foreach my $sample (keys %{$doc->{configuration}}) {
-# 	map { $runs{$_}++ } keys %{$doc->{configuration}{$sample}{members}}; 
-#       }
-#     } else {  
-#       die "Couldn't get trackdb at ", $trackdb->{uri} , " from study $name in the Registry when trying to get all its runs, reason: " .$response->code ." , ". $response->content."\n";
-#     }
-#   }
-# 
-# 
-#   return \%assembly_ids;
-# 
-# }
+
+sub give_species_names_assembly_names_of_track_hub { 
+
+  my $self = shift;
+  my $name = shift;  # track hub name, ie study_id
+
+  defined $name
+    or print "Track hub name parameter required to get the track hub's assembly id from the Track Hub Registry\n" and return 0;
+
+  my $registry_user_name= $self->{username};
+  my $auth_token = $self->{auth_token};
+
+  my $request = GET("https://www.trackhubregistry.org/api/trackhub/$name");
+  $request->headers->header(user       => $registry_user_name);
+  $request->headers->header(auth_token => $auth_token);
+  my $response = $ua->request($request);
+  my $hub;
+
+  if ($response->is_success) {
+
+    $hub = from_json($response->content);
+
+  } else {  
+
+    print "\tCouldn't get Registered track hub $name with the first attempt when calling method give_assembly_id_of_track_hub in script ".__FILE__." reason " .$response->code ." , ". $response->content."\n";
+    my $flag_success=0;
+
+    for(my $i=1; $i<=10; $i++) {
+
+      print "\t".$i .") Retrying attempt: Retrying after 5s...\n";
+      sleep 5;
+      $response = $ua->request($request);
+      if($response->is_success){
+        $hub = from_json($response->content);
+        $flag_success =1 ;
+        last;
+      }
+    }
+
+    die "Couldn't get the track hub $name in the Registry when calling method give_assembly_id_of_track_hub in script: ".__FILE__." line ".__LINE__."\n"
+    unless $flag_success==1;
+  }
+
+  die "Couldn't find hub $name in the Registry to get its runs when calling method give_assembly_id_of_track_hub in script: ".__FILE__." line ".__LINE__."\n" 
+  unless $hub;
+
+
+  my %assembly_info ;
+
+  foreach my $trackdb (@{$hub->{trackdbs}}) {
+
+    my $tax_id = $trackdb->{species}{tax_id};
+    my $assembly_name ;
+    if($trackdb->{assembly}{synonyms}){
+      $assembly_name = $trackdb->{assembly}{synonyms};
+    }else{
+      $assembly_name = $trackdb->{assembly}{name};  # in t.aestivum the assembly name is stored only under name and not under synonym like the rest of the species
+    }
+    my $assembly_id ;
+    if ($trackdb->{assembly}{accession} ne "NA"){
+      $assembly_id= $trackdb->{assembly}{accession};
+    }else{
+      $assembly_id= "0000";
+    }
+    my $species_name = EGPlantTHs::EG::get_species_name_by_tax_id($tax_id);
+    $assembly_info{$species_name}{$assembly_name}=$assembly_id;
+    
+  }
+
+  return \%assembly_info;
+
+}
 
 
 1;

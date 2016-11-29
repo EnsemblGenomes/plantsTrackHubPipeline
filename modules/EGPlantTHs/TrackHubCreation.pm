@@ -2,15 +2,17 @@ package EGPlantTHs::TrackHubCreation;
 
 use strict ;
 use warnings;
+use autodie;
 
 use Getopt::Long; # to use the options when calling the script
 use POSIX qw(strftime); # to get GMT time stamp
+
+#use Bio::DB::Sam;
 
 use EGPlantTHs::ENA;
 use EGPlantTHs::AEStudy;
 use EGPlantTHs::SubTrack;
 use EGPlantTHs::SuperTrack;
-use EGPlantTHs::Helper;
 
 my $meta_keys_aref = EGPlantTHs::ENA::get_all_sample_keys(); # array ref that has all the keys for the ENA warehouse metadata
 
@@ -72,6 +74,19 @@ sub make_track_hub{ # main method, creates the track hub of a study in the folde
 }
 
 
+sub touch_file {
+  my @files = @_;
+  
+  for my $path (@files) {
+    if (not -f $path) {
+      open my $fileh, ">$path";
+      close $fileh;
+    }
+    utime(undef, undef, $path) or print STDERR "Can't touch this: $path ($!)";
+  }
+  return;
+}
+
 sub make_study_dir{
 
   my $self= shift;
@@ -79,8 +94,8 @@ sub make_study_dir{
 
   my $study_id = $study_obj->id;  
 
-  EGPlantTHs::Helper::run_system_command("mkdir $server_dir_full_path" . '/' . $study_id)
-    or die "I cannot make dir $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
+  mkdir "$server_dir_full_path/$study_id";  
+
 }
 
 sub make_assemblies_dirs{
@@ -92,8 +107,7 @@ sub make_assemblies_dirs{
   # For every assembly I make a directory for the study -track hub
   foreach my $assembly_name (keys %{$study_obj->get_assembly_names}){
 
-    EGPlantTHs::Helper::run_system_command("mkdir $server_dir_full_path/$study_id/$assembly_name")
-      or die "I cannot make directories of assemblies in $server_dir_full_path/$study_id in script: ".__FILE__." line: ".__LINE__."\n";
+    mkdir "$server_dir_full_path/$study_id/$assembly_name";
   }
 }
 
@@ -105,8 +119,7 @@ sub make_hubtxt_file{
   my $study_id = $study_obj->id;
   my $hub_txt_file= "$server_dir_full_path/$study_id/hub.txt";
 
-  EGPlantTHs::Helper::run_system_command("touch $hub_txt_file")
-    or die "Could not create hub.txt file in the $server_dir_full_path location\n";
+  touch_file($hub_txt_file);
   
   open(my $fh, '>', $hub_txt_file) or die "Could not open file '$hub_txt_file' $! in ".__FILE__." line: ".__LINE__."\n";
 
@@ -148,8 +161,7 @@ sub make_genomestxt_file{
 
   my $genomes_txt_file = "$server_dir_full_path/$study_id/genomes.txt";
 
-  EGPlantTHs::Helper::run_system_command("touch $genomes_txt_file")
-    or die "Could not create genomes.txt file in the $server_dir_full_path location\n";
+  touch_file($genomes_txt_file);
 
   open(my $fh2, '>', $genomes_txt_file) or die "Could not open file '$genomes_txt_file' $!\n";
 
@@ -170,8 +182,7 @@ sub make_trackDbtxt_file{
   my $study_id =$study_obj->id;
   my $trackDb_txt_file="$ftp_dir_full_path/$study_id/$assembly_name/trackDb.txt";
 
-  EGPlantTHs::Helper::run_system_command("touch $trackDb_txt_file")
-    or die "Could not create trackDb.txt file in the $ftp_dir_full_path/$study_id/$assembly_name location\n";       
+  touch_file($trackDb_txt_file);
 
   open(my $fh, '>', $trackDb_txt_file)
     or die "Error in ".__FILE__." line ".__LINE__." Could not open file '$trackDb_txt_file' $!";
@@ -328,14 +339,13 @@ sub make_biosample_sub_track_obj{
   my $parent_id = shift;
   my $visibility= shift;
 
-  #my $big_data_url = $study_obj->get_big_data_file_location_from_biorep_id($biorep_id);
-
   my $study_id=$study_obj->id;
-  my $big_data_url = EGPlantTHs::ENA::get_ENA_cram_location($biorep_id) ; 
+  my $biorep_assembly_name = $study_obj->get_assembly_name_from_biorep_id($biorep_id);
+  my $big_data_url = EGPlantTHs::ENA::get_ENA_cram_location_of_biorep_id_and_assembly_name($biorep_id, $biorep_assembly_name) ; 
 
-  if (!$big_data_url){ # if the cram file is not yet in ENA the method EGPlantTHs::ENA::get_ENA_cram_location($biorep_id) returns 0
+  if (!$big_data_url){ # if the cram file is not yet in ENA the method EGPlantTHs::ENA::get_ENA_cram_location($biorep_id, $biorep_assembly_name) returns 0
 
-    print STDERR "This biorep id $biorep_id (study id $study_id) has not yet its CRAM file in ENA\n";
+    print STDERR "This biorep id $biorep_id (study id $study_id) has not yet its CRAM file in ENA with this assembly $biorep_assembly_name\n";
     return "no cram in ENA";
   }
   my $short_label_ENA;
@@ -369,9 +379,9 @@ sub make_biosample_sub_track_obj{
       # i want the link to be like: http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/E-GEOD-55482.bioreps.txt      
       $long_label_ENA = "<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$1.".bioreps.txt"."\">".$biorep_id."</a>";
 
-     }else{ 
-        $long_label_ENA = $ena_title.";<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$biorep_accession.".bioreps.txt"."\">".$biorep_id."</a>";
-      }
+    }else{ 
+      $long_label_ENA = $ena_title.";<a href=\"http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-55482/samples/?full=truehttp://www.ebi.ac.uk/~rpetry/bbrswcapital/".$biorep_accession.".bioreps.txt"."\">".$biorep_id."</a>";
+    }
   }
 
   my $file_type = EGPlantTHs::ENA::give_big_data_file_type($big_data_url);

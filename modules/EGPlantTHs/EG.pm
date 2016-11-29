@@ -38,11 +38,15 @@ if(!$json_response){ # if response is 0
 my %plant_names;
 my %species_name_assembly_id_hash;
 my %species_name_assembly_name_hash;
-
+my %tax_id_species_name;
+my %species_tax_id;
 
 foreach my $hash_ref (@array_response_plants_assemblies){
 
   $plant_names{$hash_ref->{"species"}} =1 ;
+
+  $tax_id_species_name{$hash_ref->{"taxonomy_id"}}=$hash_ref->{"species"};
+  $species_tax_id{$hash_ref->{"species_taxonomy_id"}}=$hash_ref->{"species"};
 
   $species_name_assembly_name_hash {$hash_ref->{"species"} } =  $hash_ref->{"assembly_name"};
 
@@ -63,6 +67,26 @@ sub get_plant_names{
 }
 
 
+sub get_species_name_by_tax_id{
+
+  my $tax_id = shift;
+
+  if($tax_id_species_name{$tax_id}){
+
+    return $tax_id_species_name{$tax_id};  # returns the species name of the taxanomy id given according to the EG REST response
+
+  }elsif($species_tax_id{$tax_id}){ # this is an exception for brassica rapa
+
+    return $species_tax_id{$tax_id};
+
+  }else{
+
+    print STDERR "Could not find species name of taxanomy_id $tax_id in the EG REST response of this call: $ens_genomes_plants_call\n";
+    return 0;
+  }
+
+}
+
 sub get_assembly_name_using_species_name{ 
 
   my $species_name = shift;
@@ -75,6 +99,22 @@ sub get_assembly_name_using_species_name{
   }else{
 
     return $species_name_assembly_name_hash{$species_name};
+  }
+}
+
+
+sub get_assembly_id_using_species_name{ 
+
+  my $species_name = shift;
+  my $assembly_id = "unknown";
+
+  if(!$species_name_assembly_id_hash{$species_name}){
+
+    print STDERR "The species name: $species_name is not in EG REST response ($ens_genomes_plants_call) in the species field\n";
+    return $assembly_id;
+  }else{
+
+    return $species_name_assembly_id_hash{$species_name};
   }
 }
 
