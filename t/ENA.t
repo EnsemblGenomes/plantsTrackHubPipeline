@@ -1,4 +1,3 @@
-
 use Test::More;
 use Capture::Tiny ':all';
 
@@ -28,7 +27,7 @@ is($study_title,"Oryza sativa Japonica Group transcriptome sequencing", "ENA tit
 
 #test5
 my $study_title_wrong_study_title=EGPlantTHs::ENA::get_ENA_study_title("DRP0003");
-is($study_title_wrong_study_title,"not yet in ENA", "not yet in ENA repsonse when giving wrong study id..");
+is($study_title_wrong_study_title,"not yet in ENA", "not yet in ENA response when giving wrong study id..");
 
 # -----
 # test get_ENA_title method
@@ -100,5 +99,18 @@ like($url , qr/^http:\/\/www.ebi.ac.uk\/ena\/data\/.+accession=SAMN02666886.+sex
 my $url_ena="http://ftp.sra.ebi.ac.uk/vol1/ERZ285/ERZ285703/SRR3019819.cram";
 my $file_type = EGPlantTHs::ENA::give_big_data_file_type($url_ena);
 is($file_type, "cram", "big data file type is as expected");
+
+
+# -----
+# test get_assembly_name_from_analysis_XML_using_analysis_id method
+# -----
+
+#test20
+my $assembly_name=EGPlantTHs::ENA::get_assembly_name_from_analysis_XML_using_analysis_id("ERZ359348");
+is($assembly_name, "SolTub_3.0", "assembly name of analysis id ERZ359348 is as expected");
+
+#test22
+$assembly_name=EGPlantTHs::ENA::get_assembly_name_from_analysis_XML_using_analysis_id("359348");
+is($assembly_name, "not yet in ENA", "assembly name of a wrong analysis id is 0");
 
 done_testing();

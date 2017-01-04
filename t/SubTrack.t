@@ -14,7 +14,6 @@ use lib $FindBin::Bin . '/../modules';
 #test1
 use_ok(EGPlantTHs::SubTrack);  # it checks if it can use the module correctly
 
-
 # -----
 # test constructor
 # -----

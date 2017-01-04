@@ -1,4 +1,3 @@
-
 use Test::More;
 use Test::JSON; # had to install also from cpan the module JSON::Any which is used in Test::Json
 use HTTP::Tiny;
@@ -21,7 +20,7 @@ use_ok(EGPlantTHs::JsonResponse);  # it checks if it can use the module correctl
 
 #test2
 my $http = HTTP::Tiny->new();
-my $url= "http://plantain:3000/json/70/getRunsByStudy/SRP068911";
+my $url= "http://plantain:3000/json/70/getBiorepsByStudy/SRP068911";
 
 my $response = $http->get($url);
 
@@ -38,7 +37,7 @@ isa_ok($json_response_aref,"ARRAY"); # it checks if I get back a ref to an array
 
 foreach my $hash_ref (@$json_response_aref){
   foreach my $key (keys(%$hash_ref)){
-    like($key,qr/[ORGANISM STATUS FTP_LOCATION]/,'keys of the key-value pairs in the json stanza include ORGANSIM or STATUS or FTP_LOCATION');
+    like($key,qr/[ORGANISM STATUS CRAM_LOCATION]/,'keys of the key-value pairs in the json stanza include ORGANSIM or STATUS or CRAM_LOCATION');
     last;
   }
   last;

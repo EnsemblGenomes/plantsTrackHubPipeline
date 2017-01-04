@@ -67,4 +67,15 @@ cmp_ok(scalar keys (%$study_ids_href), 'gt', 1000 , "Number of cram alignments c
 my $study_ids_zea_mays_href= EGPlantTHs::ArrayExpress::get_study_ids_for_plant("zea_mays");
 cmp_ok(scalar keys (%$study_ids_zea_mays_href), 'gt', 140 , "Number of cram alignments completed by AE is more than 140"); # 18 May 2016 it is 143
 
+# -----
+# # test get_all_recalled_study_ids method
+# -----
+
+#test10
+my $recalled_study_ids_href= EGPlantTHs::ArrayExpress::get_all_recalled_study_ids($plant_names_AE_href);
+ok(exists $recalled_study_ids_href->{SRP071563} ,"Recalled study id SRP071563 is returned from the method");
+
+#test11
+dies_ok(sub{EGPlantTHs::ArrayExpress::get_all_recalled_study_ids()},'checks if method called without parameter dies');
+
 done_testing();

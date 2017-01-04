@@ -11,6 +11,30 @@ use Time::Piece;
 use EGPlantTHs::AEStudy;
 use EGPlantTHs::TrackHubCreation;
 
+# this test to be run it needs to be in the farm
+
+# use EGPlantTHs::Registry;
+# use EGPlantTHs::EG;
+# my $registry_obj=EGPlantTHs::Registry->new("testing","testing","hidden");
+# 
+# 
+# #my %hash=%{$registry_obj->give_assembly_ids_of_track_hub("SRP065994")};
+# 
+# my %hash=%{$registry_obj->give_assembly_ids_of_track_hub("ERP000954")};
+# 
+# #print join(', ', keys %hash2), "\n";
+# 
+# foreach my $assembly_id (keys %hash){
+#   print $assembly_id."\t";
+#   foreach my $assembly_name (keys %{$hash{$assembly_id}}){
+#     print $assembly_name."\t";
+#     my $tax_id=$hash{$assembly_id}{$assembly_name};
+#     print EGPlantTHs::EG::get_species_name_by_tax_id($tax_id)."\n";
+#   }
+# }
+# 
+# 
+# __END__
 # -----
 # checks if the module can load
 # -----
@@ -22,7 +46,7 @@ use_ok(EGPlantTHs::Registry);
 # test constructor
 # -----
 
-my $registry_obj = EGPlantTHs::Registry->new("mytesting" ,"testing", "hidden" );
+my $registry_obj = EGPlantTHs::Registry->new("testing" ,"testing", "hidden" );
 
 # test2
 isa_ok($registry_obj,'EGPlantTHs::Registry','checks whether the object constructed is of my class type');
@@ -30,6 +54,10 @@ isa_ok($registry_obj,'EGPlantTHs::Registry','checks whether the object construct
 # test3
 dies_ok(sub{EGPlantTHs::Registry->new("blabla")},'checks if wrong object construction of my class dies');
 
+
+done_testing();
+
+__END__
 # let's make first the TH:
 `mkdir /nfs/ensemblgenomes/ftp/pub/misc_data/.TrackHubs/testing`;
 my $trackHubCreator_obj = EGPlantTHs::TrackHubCreation->new("SRP045759" ,"/nfs/ensemblgenomes/ftp/pub/misc_data/.TrackHubs/testing" );
