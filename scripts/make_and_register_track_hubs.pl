@@ -584,7 +584,6 @@ sub print_registry_registered_number_of_th{
   my %distinct_bioreps;
 
   foreach my $hub_name (keys %{$all_track_hubs_in_registry_href}){
-  
     my %bioreps_hash = %{$registry_obj->give_all_bioreps_of_study_from_Registry($hub_name)};
     map { $distinct_bioreps{$_}++ } keys %bioreps_hash;
   }
