@@ -41,6 +41,7 @@ my %species_name_assembly_name_hash;
 my %tax_id_species_name;
 my %species_tax_id;
 
+
 foreach my $hash_ref (@array_response_plants_assemblies){
 
   $plant_names{$hash_ref->{"species"}} =1 ;
@@ -50,7 +51,7 @@ foreach my $hash_ref (@array_response_plants_assemblies){
 
   $species_name_assembly_name_hash {$hash_ref->{"species"} } =  $hash_ref->{"assembly_name"};
 
-  if(! $hash_ref->{"assembly_id"}){# for triticum_aestivum that is without assembly id , I store 0000, this is specifically for the THR to work
+  if(! $hash_ref->{"assembly_id"}){# for zea_mays that is without assembly id , I store 0000, this is specifically for the THR to work
 
     $species_name_assembly_id_hash{$hash_ref->{"species"}} = "0000" ;
                                                                      
@@ -96,6 +97,7 @@ sub get_assembly_name_using_species_name{
 
     print STDERR "The species name: $species_name is not in EG REST response ($ens_genomes_plants_call) in the species field\n";
     return $assembly_name;
+
   }else{
 
     return $species_name_assembly_name_hash{$species_name};
@@ -103,7 +105,7 @@ sub get_assembly_name_using_species_name{
 }
 
 
-sub get_assembly_id_using_species_name{ 
+sub get_assembly_id_using_species_name{
 
   my $species_name = shift;
   my $assembly_id = "unknown";
@@ -112,9 +114,10 @@ sub get_assembly_id_using_species_name{
 
     print STDERR "The species name: $species_name is not in EG REST response ($ens_genomes_plants_call) in the species field\n";
     return $assembly_id;
-  }else{
 
-    return $species_name_assembly_id_hash{$species_name};
+  }else{
+    
+    return $species_name_assembly_id_hash{$species_name};    
   }
 }
 

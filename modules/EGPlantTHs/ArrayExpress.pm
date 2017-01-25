@@ -51,7 +51,7 @@ sub get_runs_json_for_study { # returns json string or 0 if url not valid
     return EGPlantTHs::JsonResponse::get_Json_response($url);
 
   } else{
-    die __METHOD__ ." needs to be called with parameter study_id\n";
+    die  "method get_runs_json_for_study needs to be called with parameter study_id\n";
   }
 }
 
@@ -60,7 +60,7 @@ sub get_completed_study_ids_for_plants{ # I want this method to return only stud
   my $plant_names_href_EG = shift;
 
   if(!$plant_names_href_EG){
-    die __METHOD__ ." needs to be called with parameter of a hash ref where the hash contains the plant names as keys.\n";
+    die "method get_completed_study_ids_for_plants needs to be called with parameter of a hash ref where the hash contains the plant names as keys.\n";
   }
 
   my $url;
@@ -97,7 +97,7 @@ sub get_study_ids_for_plant{
   my $url= $array_express_url."/getRunsByOrganism/" . $plant_name;
 
   if(!$plant_name){
-    die __METHOD__ ." needs to be called with parameter of a plant name\n";
+    die "method get_study_ids_for_plant needs to be called with parameter of a plant name\n";
   }
   
   my %study_ids;
@@ -131,7 +131,7 @@ sub get_all_recalled_study_ids {
   my %recalled_study_ids;
 
   if(!$plant_names_href_EG){
-    die __METHOD__ ." needs to be called with parameter of a hash ref where the hash contains the plant names as keys\n";
+    die "method get_all_recalled_study_ids needs to be called with parameter of a hash ref where the hash contains the plant names as keys\n";
   }
  
 #response:

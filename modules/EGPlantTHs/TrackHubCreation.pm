@@ -7,8 +7,6 @@ use autodie;
 use Getopt::Long; # to use the options when calling the script
 use POSIX qw(strftime); # to get GMT time stamp
 
-#use Bio::DB::Sam;
-
 use EGPlantTHs::ENA;
 use EGPlantTHs::AEStudy;
 use EGPlantTHs::SubTrack;
@@ -87,14 +85,17 @@ sub touch_file {
   return;
 }
 
+
 sub make_study_dir{
 
   my $self= shift;
   my ($server_dir_full_path,$study_obj) = @_;
 
   my $study_id = $study_obj->id;  
-
-  mkdir "$server_dir_full_path/$study_id";  
+ 
+  if (! -d "$server_dir_full_path/$study_id"){
+    mkdir "$server_dir_full_path/$study_id";  
+  }
 
 }
 

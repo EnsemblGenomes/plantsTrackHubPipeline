@@ -7,13 +7,12 @@ use LWP::UserAgent;
 use XML::LibXML;
 use utf8;
 use DateTime::Format::Strptime;
-#use Bio::DB::HTS;
 
 my $ua = LWP::UserAgent->new;
 my $parser = XML::LibXML->new;
 
 my $all_cram_locations_href = get_hash_of_locations_of_cram_submissions();  # hash is like: hash{DRR008478"}{"TAIR10"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
-my %unique_cram_locations= %{get_last_updated_cram_file_location_hash ($all_cram_locations_href)};  # hash is like: hash{DRR008478"}{"TAIR10"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+my %unique_cram_locations= %{get_last_updated_cram_file_location_hash($all_cram_locations_href)};  # hash is like: hash{DRR008478"}{"TAIR10"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
 
 sub get_ENA_study_title{  
 
@@ -363,7 +362,6 @@ sub get_hash_of_locations_of_cram_submissions{
         return 0;
       }
     }
-     
     return \%cram_name_ena_location;
 
   }
@@ -372,8 +370,8 @@ sub get_hash_of_locations_of_cram_submissions{
 
 sub get_last_updated_cram_file_location_hash{
   
-  my $location_href = shift; # the hash would be like this: $location_hash{DRR008478"}{"TAIR10"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
-  my %unique_cram_names_href;
+   my $location_href = shift; # the hash would be like this: $location_hash{DRR008478"}{"TAIR10"}{"2016-03-04"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+   my %unique_cram_names;
   
   foreach my $cram_name (keys %$location_href){
     foreach my $assembly_name (keys %{$location_href->{$cram_name}}){
@@ -398,11 +396,10 @@ sub get_last_updated_cram_file_location_hash{
         }
       }
 
-      $unique_cram_names_href{$cram_name}{$assembly_name}=$location_of_max_timestamp; #the hash would be like this: $unique_cram_names_href{DRR008478"}{"TAIR10"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
+      $unique_cram_names{$cram_name}{$assembly_name}=$location_of_max_timestamp; #the hash would be like this: $unique_cram_names_href{DRR008478"}{"TAIR10"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
     }
   }
-
-  return \%unique_cram_names_href;
+  return \%unique_cram_names;
 }
 
 sub get_ENA_cram_location_of_biorep_id_and_assembly_name{
