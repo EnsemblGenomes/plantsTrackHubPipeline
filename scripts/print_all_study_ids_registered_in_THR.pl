@@ -19,7 +19,6 @@ my %track_hub_names = %{$registry_obj->give_all_Registered_track_hub_names()};
 
 foreach my $study_id (keys %track_hub_names){
 
-
   print $study_id."\n";
   
 }
