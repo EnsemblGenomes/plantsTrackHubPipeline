@@ -174,16 +174,29 @@ if($study_ids_file_content){
     $unsuccessful_studies_href_new_assemblies = make_register_THs_with_logging("new_assembly", $registry_obj, $study_ids_to_be_updated_with_new_assemblies_href , $server_dir_full_path, $organism_assmblAccession_EG_href,$plant_names_AE_response_href); 
   }
 
-  my %all_unsuccessful_studies = (%$unsuccessful_studies_href_non_new_assemblies ,%$unsuccessful_studies_href_new_assemblies );
-
-  if(scalar (keys %all_unsuccessful_studies) > 0){
-    print "\nThere were some studies that failed to be made or update track hubs:\n\n";
+  if(scalar (keys %{$unsuccessful_studies_href_non_new_assemblies}) > 0 or scalar (keys %{$unsuccessful_studies_href_new_assemblies}) > 0){
+    print "\nThere were some studies that failed to be made or failed to have their track hubs updated:\n\n";
   }
 
+  if(scalar (keys %{$unsuccessful_studies_href_non_new_assemblies}) > 0){
+    print "From the updates/new with no new assemblies\n\n":
+  }
   my $counter=0;
-  foreach my $reason_of_failure (keys %all_unsuccessful_studies){  # hash looks like; $unsuccessful_studies{"Missing all Samples in AE REST API"}{$study_id}= 1;
+  foreach my $reason_of_failure (keys %{$unsuccessful_studies_href_non_new_assemblies}){  # hash looks like: $unsuccessful_studies{"Missing all Samples in AE REST API"}{$study_id}= 1;
 
-    foreach my $failed_study_id (keys $all_unsuccessful_studies{$reason_of_failure}){
+    foreach my $failed_study_id (keys %{$unsuccessful_studies_href_non_new_assemblies->{$reason_of_failure}}){
+
+      $counter ++;
+      print "$counter. $failed_study_id\t".$reason_of_failure."\n";
+    }
+  }
+
+  if (scalar (keys %{$unsuccessful_studies_href_new_assemblies}) > 0){
+        print "\nFrom the updates with new assemblies\n\n":
+  }
+  foreach my $reason_of_failure (keys %{$unsuccessful_studies_href_new_assemblies}){  # hash looks like: $unsuccessful_studies{"Missing all Samples in AE REST API"}{$study_id}= 1;
+
+    foreach my $failed_study_id (keys %{$unsuccessful_studies_href_new_assemblies->{$reason_of_failure}}){
 
       $counter ++;
       print "$counter. $failed_study_id\t".$reason_of_failure."\n";
@@ -292,126 +305,124 @@ sub make_register_THs_with_logging{
 
   foreach my $study_id (keys %$study_ids_href){
 
-      my $study_obj = EGPlantTHs::AEStudy->new($study_id,$plant_names_AE_response_href);
+    my $study_obj = EGPlantTHs::AEStudy->new($study_id,$plant_names_AE_response_href);
 
-      my $sample_ids_href = $study_obj->get_sample_ids();
-      if(!$sample_ids_href){  # there are cases where the AE API returns a study with the the sample_ids field to be null , I want to skip these studies
-        $unsuccessful_studies{"Missing all Samples in AE REST API"}{$study_id}= 1;
-        next;
-      }
+    my $sample_ids_href = $study_obj->get_sample_ids();
+    if(!$sample_ids_href){  # there are cases where the AE API returns a study with the the sample_ids field to be null , I want to skip these studies
+      $unsuccessful_studies{"Missing all Samples in AE REST API"}{$study_id}= 1;
+      next;
+    }
 
-      $line_counter++;
-      print "$line_counter.\tcreating track hub in the server for study $study_id\t"; 
+    $line_counter++;
+    print "$line_counter.\tcreating track hub in the server for study $study_id\t"; 
+
+    if($new_or_not_assembly_flag eq "non_new_assembly"){
 
       my $ls_output = `ls $server_dir_full_path`  ;
-
-      if($new_or_not_assembly_flag eq "non_new_assembly"){
-
-        if($ls_output =~/$study_id/){ # i check if the directory of the study exists already, I want to replace the Track Hub or make a new one
+      if($ls_output =~/$study_id/){ # i check if the directory of the study exists already, I want to replace the Track Hub or make a new one
    
-          my $backup_name = $study_id."_backup";
-          if (-d "$server_dir_full_path/$backup_name"){
-            remove_tree "$server_dir_full_path/$backup_name"; # i remove it in case it exists from previous un-successful runs
-          }  
-          mkdir "$server_dir_full_path/$backup_name" ; # I create a backup directory of this track hub- in case the update of this track hub with the new assembly goes wrong, the track hub remains the way it was before the attempt to update
-          `cp -r $server_dir_full_path/$study_id/* $server_dir_full_path/$backup_name`;
-          remove_tree "$server_dir_full_path/$study_id";  # i remove it, to re-make it
+        my $backup_name = $study_id."_backup";
+        if (-d "$server_dir_full_path/$backup_name"){
+          remove_tree "$server_dir_full_path/$backup_name"; # i remove it in case it exists from previous un-successful runs
+        }  
+        mkdir "$server_dir_full_path/$backup_name" ; # I create a backup directory of this track hub- in case the update of this track hub with the new assembly goes wrong, the track hub remains the way it was before the attempt to update
+        `cp -r $server_dir_full_path/$study_id/* $server_dir_full_path/$backup_name`;
+        remove_tree "$server_dir_full_path/$study_id";  # i remove it, to re-make it
   
-          print " (update) "; # if it already exists
-        }else{
-          print " (new) ";
-        }
-      }else{ # if it's an assembly update
-          my $backup_name = $study_id."_backup";
-          if (-d "$server_dir_full_path/$backup_name"){
-            remove_tree "$server_dir_full_path/$backup_name"; # i remove it in case it exists from previous un-successful runs
-          }  
-          mkdir "$server_dir_full_path/$backup_name" ; # I create a backup directory of this track hub- in case the update of this track hub with the new assembly goes wrong, the track hub remains the way it was before the attempt to update
-          `cp -r $server_dir_full_path/$study_id/* $server_dir_full_path/$backup_name`;
+        print " (update) "; # if it already exists
+      }else{
+        print " (new) ";
+      }
+    }else{ # if it's an assembly update
+        my $backup_name = $study_id."_backup";
+        if (-d "$server_dir_full_path/$backup_name"){
+          remove_tree "$server_dir_full_path/$backup_name"; # i remove it in case it exists from previous un-successful runs
+        }  
+        mkdir "$server_dir_full_path/$backup_name" ; # I create a backup directory of this track hub- in case the update of this track hub with the new assembly goes wrong, the track hub remains the way it was before the attempt to update
+        `cp -r $server_dir_full_path/$study_id/* $server_dir_full_path/$backup_name`;
+    }
+
+    my $script_output;
+    my @assembly_names_assembly_ids_pairs ;
+
+    if($new_or_not_assembly_flag eq "non_new_assembly"){
+
+      my $track_hub_creator_obj = EGPlantTHs::TrackHubCreation->new($study_id,$server_dir_full_path);
+      $script_output = $track_hub_creator_obj->make_track_hub($plant_names_AE_response_href);
+
+    }else{
+
+      my @script_output_list = @{update_TH_with_new_assembly($study_obj, $study_ids_href, $registry_obj,$plant_names_AE_response_href, $server_dir_full_path ,$organism_assmblAccession_EG_href )};
+      $script_output = $script_output_list[0];
+      @assembly_names_assembly_ids_pairs = @{$script_output_list[1]};
+    }
+
+    print $script_output;
+ 
+    if($script_output !~ /..Done/){  # if for some reason the track hub didn't manage to be made in the server, it shouldn't be registered in the Registry, for example Robert gives me a study id as completed that is not yet in ENA
+
+      print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id is deleted from the server\n\n" ;
+
+      print "\t..Skipping registration part\n";
+      
+      if (-d "$server_dir_full_path/$study_id"){
+        remove_tree "$server_dir_full_path/$study_id" ; 
+      }
+      my $backup_name = $study_id."_backup";
+        if (-d "$server_dir_full_path/$backup_name" ) {
+          rename ("$server_dir_full_path/$backup_name","$server_dir_full_path/$study_id"); 
       }
 
-      my $script_output;
-      my @assembly_names_assembly_ids_pairs ;
+      $line_counter --;
 
-      if($new_or_not_assembly_flag eq "non_new_assembly"){
+      if ($script_output=~/No ENA Warehouse metadata found/){
 
-        my $track_hub_creator_obj = EGPlantTHs::TrackHubCreation->new($study_id,$server_dir_full_path);
-        $script_output = $track_hub_creator_obj->make_track_hub($plant_names_AE_response_href);
+        $unsuccessful_studies{"Sample metadata not yet in ENA"} {$study_id}= 1;
+
+      }elsif($script_output=~/Skipping this TH because at least 1 of the cram files of the TH is not yet in ENA/){ 
+
+        $unsuccessful_studies{"At least 1 cram file of study is not yet in ENA"} {$study_id}= 1;
 
       }else{
 
-        my @script_output_list = @{update_TH_with_new_assembly($study_obj, $study_ids_href, $registry_obj,$plant_names_AE_response_href, $server_dir_full_path ,$organism_assmblAccession_EG_href )};
-        $script_output = $script_output_list[0];
-        @assembly_names_assembly_ids_pairs = @{$script_output_list[1]};
+        $unsuccessful_studies{"Study not yet in ENA"} {$study_id}= 1;
       }
 
-      print $script_output;
- 
-      if($script_output !~ /..Done/){  # if for some reason the track hub didn't manage to be made in the server, it shouldn't be registered in the Registry, for example Robert gives me a study id as completed that is not yet in ENA
+    }else{  # if the study is successfully created in the ftp server, I go ahead and register it
+        
+      my $return_string;
+      if($new_or_not_assembly_flag eq "non_new_assembly") {
 
-        print STDERR "Track hub of $study_id could not be made in the server - Folder $study_id is deleted from the server\n\n" ;
+        $return_string = register_track_hub_in_TH_registry($registry_obj,$study_obj,$organism_assmblAccession_EG_href );  
 
-        print "\t..Skipping registration part\n";
-      
-        if (-d "$server_dir_full_path/$study_id"){
-          remove_tree "$server_dir_full_path/$study_id" ; 
-        }
+      } else {
+
+        my $assemblyNames_assemblyAccesions_string = join(",",@assembly_names_assembly_ids_pairs);
+        my $hub_txt_url = $server_url . "/" . $study_id . "/hub.txt" ;
+        $return_string = $registry_obj->register_track_hub($study_id,$hub_txt_url,$assemblyNames_assemblyAccesions_string);
+
+        print "trying to register: $study_id,$hub_txt_url,$assemblyNames_assemblyAccesions_string\n";  # comment this!  
+      }
+
+      if($return_string !~ /is Registered/){# if something went wrong with the registration, i will not make a track hub out of this study
+
         my $backup_name = $study_id."_backup";
-         if (-d "$server_dir_full_path/$backup_name" ) {
-           rename ("$server_dir_full_path/$backup_name","$server_dir_full_path/$study_id"); 
-        }
+        if (-d "$server_dir_full_path/$study_id") {remove_tree "$server_dir_full_path/$study_id"; }
+        if (-d "$server_dir_full_path/$backup_name") { rename ("$server_dir_full_path/$backup_name","$server_dir_full_path/$study_id");} 
 
         $line_counter --;
+        $return_string = $return_string . "\t..Something went wrong with the Registration process -- this study will be skipped..\n";
+        print STDERR "Study $study_id could not be registered in the THR - Folder $study_id is deleted from the server\n";
+        $unsuccessful_studies{"Registry issue"}{$study_id}= 1;
 
-        if ($script_output=~/No ENA Warehouse metadata found/){
-
-          $unsuccessful_studies{"Sample metadata not yet in ENA"} {$study_id}= 1;
-
-        }elsif($script_output=~/Skipping this TH because at least 1 of the cram files of the TH is not yet in ENA/){ 
-
-          $unsuccessful_studies{"At least 1 cram file of study is not yet in ENA"} {$study_id}= 1;
-
-        }else{
-
-          $unsuccessful_studies{"Study not yet in ENA"} {$study_id}= 1;
-        }
-
-       }
-       else{  # if the study is successfully created in the ftp server, I go ahead and register it
-        
-        my $return_string;
-        if($new_or_not_assembly_flag eq "non_new_assembly") {
-
-          $return_string = register_track_hub_in_TH_registry($registry_obj,$study_obj,$organism_assmblAccession_EG_href );  
-
-        } else {
-
-          my $assemblyNames_assemblyAccesions_string = join(",",@assembly_names_assembly_ids_pairs);
-          my $hub_txt_url = $server_url . "/" . $study_id . "/hub.txt" ;
-          $return_string = $registry_obj->register_track_hub($study_id,$hub_txt_url,$assemblyNames_assemblyAccesions_string);
-
-          print "trying to register: $study_id,$hub_txt_url,$assemblyNames_assemblyAccesions_string\n";  # comment this!  
-        }
-
-        if($return_string !~ /is Registered/){# if something went wrong with the registration, i will not make a track hub out of this study
-
-          my $backup_name = $study_id."_backup";
-          if (-d "$server_dir_full_path/$study_id") {remove_tree "$server_dir_full_path/$study_id"; }
-          if (-d "$server_dir_full_path/$backup_name") { rename ("$server_dir_full_path/$backup_name","$server_dir_full_path/$study_id");} 
-
-          $line_counter --;
-          $return_string = $return_string . "\t..Something went wrong with the Registration process -- this study will be skipped..\n";
-          print STDERR "Study $study_id could not be registered in the THR - Folder $study_id is deleted from the server\n";
-          $unsuccessful_studies{"Registry issue"}{$study_id}= 1;
-
-        }else{ # successful overall
-          my $backup_name = $study_id."_backup";
-          if (-d "$server_dir_full_path/$backup_name") {remove_tree "$server_dir_full_path/$backup_name" ;} 
-        }
-        print $return_string;
-      
+      }else{ # successful overall
+        my $backup_name = $study_id."_backup";
+        if (-d "$server_dir_full_path/$backup_name") {remove_tree "$server_dir_full_path/$backup_name" ;} 
       }
-   }
+      print $return_string;
+      
+    }
+  }
 
   return (\%unsuccessful_studies);
 }
