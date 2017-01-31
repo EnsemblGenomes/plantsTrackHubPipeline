@@ -44,7 +44,7 @@ GetOptions(
   "server_dir_full_path=s" => \$server_dir_full_path,
   "server_url=s" => \$server_url,  
   "th_visibility=s" => \$track_hub_visibility, # "hidden" or "public"
-  "do_track_hubs_from_scratch"  => \$from_scratch  # flag
+  "do_track_hubs_from_scratch"  => \$from_scratch  # flag  # ATTENTION::  never use this flag, because it will delete all the archived assemblies.
 );
 
 if(!$server_dir_full_path){
@@ -132,7 +132,6 @@ sub print_registered_TH_in_THR_stats{
 
   print "There are in total ". scalar (keys %{$all_track_hubs_in_registry_after_update_href});
   print " track hubs with total ".scalar (keys %distinct_bioreps)." bioreps registered in the Track Hub Registry\n\n";
-
 }
 
 
@@ -148,7 +147,7 @@ sub run_pipeline_with_incremental_update_with_logging{
 
   my $registered_track_hubs_href = $registry_obj->give_all_Registered_track_hub_names; # track hubs that are already registered
 
-  #remove_obsolete_studies($registry_obj, $registered_track_hubs_href, $server_dir_full_path); # if there are any obsolete track hubs, they are removed from the THR and the server
+  remove_obsolete_studies($registry_obj, $registered_track_hubs_href, $server_dir_full_path); # if there are any obsolete track hubs, they are removed from the THR and the server
 
   my ($new_study_ids_aref, $common_study_ids_aref) = get_new_and_common_study_ids($study_ids_href_AE,$registered_track_hubs_href);
 
@@ -157,7 +156,7 @@ sub run_pipeline_with_incremental_update_with_logging{
   if(scalar (@$new_study_ids_aref) == 0){
     print "No new studies are found between current AE API studies and registered studies in the THR\n";
   }else{
-    print "\nNew studies (".scalar (@$new_study_ids_aref) ." studies) from last time the pipeline was run:\n\n";
+    print "\nNew studies (".scalar (@{$new_study_ids_aref}) ." studies) from last time the pipeline was run:\n\n";
     %unsuccessful_studies= create_new_studies_in_incremental_update($new_study_ids_aref,$server_dir_full_path ,$plant_names_AE_response_href,$registry_obj,$organism_assmblAccession_EG_href,\%unsuccessful_studies); 
   }
 
@@ -165,7 +164,6 @@ sub run_pipeline_with_incremental_update_with_logging{
 
   return \%unsuccessful_studies; 
 }
-
 
 sub update_common_studies{
 
@@ -205,26 +203,59 @@ sub update_common_studies{
     my $old_study_counter = $study_counter;
 
     my $backup_name = $study_id."_backup";
-    remove_tree "$server_dir_full_path/$backup_name" if -d "$server_dir_full_path/$backup_name";  # i remove it in case it exists from previous un-successful runs
+    if (-d "$server_dir_full_path/$backup_name"){ remove_tree "$server_dir_full_path/$backup_name"; }  # i remove it in case it exists from previous un-successful runs
     mkdir "$server_dir_full_path/$backup_name" ; # I create a backup directory of this track hub- in case the update of this track hub with the new assembly goes wrong, the track hub remains the way it was before the attempt to update
     `cp -r $server_dir_full_path/$study_id/* $server_dir_full_path/$backup_name`;
-    remove_tree "$server_dir_full_path/$study_id";  # i remove it, to re-make it
+    
+    my %assembly_names_of_study=%{$study_obj->get_assembly_names()}; # I remove the assemblies that are currently in AE. this is because I want to keep the archived assemblies
+    foreach my $assembly_name (keys %assembly_names_of_study){
+      remove_tree "$server_dir_full_path/$study_id/$assembly_name";  # i remove it, to re-make it
+    }
     
     my $date_registry_last = localtime($registry_obj->get_Registry_hub_last_update($study_id))->strftime('%F %T');
     my $reason_of_unsuccessful_study;
+###start of code for the updates of the studies that have archived assemblies
 
-    ($reason_of_unsuccessful_study,$study_counter) = make_and_register_track_hub($study_obj,$registry_obj,$old_study_counter, $server_dir_full_path,$organism_assmblAccession_EG_href ,$plant_names_AE_response_href); 
+    # hash{brachypodium_distachyon}{"v1.0"}="GCA_000005505.1", hash{brachypodium_distachyon}{"v2.0"}= "GCA_000005505.2"  -> in the THR
+    my %old_organism_name_assembly_id_assembly_name_hash_THR = %{$registry_obj->give_species_names_assembly_names_of_track_hub($study_id)};
+    my $flag_archived_assemblies=0;
+    my %hash_of_study;
+
+    foreach my $species (keys %old_organism_name_assembly_id_assembly_name_hash_THR){
+      if (keys %{$old_organism_name_assembly_id_assembly_name_hash_THR{$species}} > 1){
+        $flag_archived_assemblies =1;
+        my @assembly_names_THR=keys %{$old_organism_name_assembly_id_assembly_name_hash_THR{$species}};
+        my @array;
+        $array[0] = "Study $study_id of species $species in AE has assembly name: ".EGPlantTHs::EG::get_assembly_name_using_species_name($species)." ; we had in the THR for this plant assembly name/s: ";
+        $array[1] = join (",", @assembly_names_THR);        
+        $hash_of_study{$species}=(\@array) ;
+      }
+    }
+
+### end of code for the updates of the studies that have archived assemblies
+    if($flag_archived_assemblies ==0 ){
+      ($reason_of_unsuccessful_study,$study_counter) = make_and_register_track_hub($study_obj,$registry_obj,$old_study_counter, $server_dir_full_path,$organism_assmblAccession_EG_href ,$plant_names_AE_response_href); 
+    }else{
+      ($reason_of_unsuccessful_study,$study_counter) = make_and_register_track_hub_with_new_assembly($study_obj,$registry_obj,$old_study_counter, $server_dir_full_path,$organism_assmblAccession_EG_href ,$plant_names_AE_response_href); 
+
+      print "\t..Update of TH with archived assemblies needed because:\t";
+      foreach my $species (keys %hash_of_study){
+        my @array_of_species = @{$hash_of_study{$species}};
+        print join (" ",@array_of_species);
+        print "\n";
+      }
+     }
 
     if($reason_of_unsuccessful_study ne "successful_study"){
 
-      remove_tree "$server_dir_full_path/$study_id" if -d "$server_dir_full_path/$study_id"; 
+      if (-d "$server_dir_full_path/$study_id" ) {remove_tree "$server_dir_full_path/$study_id";} 
       rename ("$server_dir_full_path/$backup_name","$server_dir_full_path/$study_id"); 
 
       #$registry_obj->delete_track_hub($study_id);  # this is an update of a study, so the study is already registered in the THR, if something goes wrong in the process of making it in the server, I have to remove it from the THR too
       $unsuccessful_studies_href->{$reason_of_unsuccessful_study}{$study_id}=1;
     }else{ # if successful
 
-      remove_tree "$server_dir_full_path/$backup_name" if -d "$server_dir_full_path/$backup_name"; 
+      if (-d "$server_dir_full_path/$backup_name") {remove_tree "$server_dir_full_path/$backup_name" ; }
     }
 
 #######
@@ -249,17 +280,19 @@ sub update_common_studies{
 
     }else{
 
-      print "Don't know why this study is being updated\n" and print STDERR "Something went wrong with common study between the THR and AE $study_id that I decided to update; don't know why needs updating\n";
+      print "Don't know why this study is being updated\n" and print STDERR "Something went wrong with common study between the THR and AE $study_id that I decided to update; don't know why needs updating\n\n";
     }
-  }
+  } ##### END OF LOOPING THROUGH THE study_id THAT NEED UPDATE
 ## extra code start
 
-  print "\n\n Assembly updates:\n\n";
+  if (scalar (keys %{$common_studies_to_be_updated_with_new_assembly_href}) > 0){
+    print "\n\n Assembly updates:\n\n";
+  }
 
   foreach my $study_id (keys %{$common_studies_to_be_updated_with_new_assembly_href}){
 
     my $backup_name = $study_id."_backup";
-    remove_tree "$server_dir_full_path/$backup_name" if -d "$server_dir_full_path/$backup_name"; 
+    if (-d "$server_dir_full_path/$backup_name") {remove_tree "$server_dir_full_path/$backup_name" ; }
     mkdir "$server_dir_full_path/$backup_name" ; # I create a backup directory of this track hub- in case the update of this track hub with the new assembly goes wrong, the track hub remains the way it was before the attempt to update
     `cp -r $server_dir_full_path/$study_id/* $server_dir_full_path/$backup_name`;
 
@@ -283,12 +316,12 @@ sub update_common_studies{
 
     if($reason_of_unsuccessful_study ne "successful_study"){
 
-      remove_tree "$server_dir_full_path/$study_id" if -d "$server_dir_full_path/$study_id";
+      if (-d "$server_dir_full_path/$study_id") {remove_tree "$server_dir_full_path/$study_id"; }
       rename ("$server_dir_full_path/$backup_name","$server_dir_full_path/$study_id") ;
       $unsuccessful_studies_href->{$reason_of_unsuccessful_study}{$study_id}=1;
 
     }else{ # if the update of the track hubs is successful, I can remove the back up directory- track hub
-      remove_tree "$server_dir_full_path/$backup_name" if -d "$server_dir_full_path/$backup_name" ;
+      if (-d "$server_dir_full_path/$backup_name") {remove_tree "$server_dir_full_path/$backup_name" ; }
     }
 
     print "\t..Assembly update needed because: ";
@@ -314,7 +347,7 @@ sub create_new_studies_in_incremental_update{
 
   my $study_counter = 0;
 
-  foreach my $study_id (@$new_study_ids_aref) {
+  foreach my $study_id (@{$new_study_ids_aref}) {
 
     my $ls_output = `ls $server_dir_full_path` ;
 
@@ -416,7 +449,7 @@ sub remove_obsolete_studies {   # a study is obsolete when it is returned in the
  
       my $study_dir = "$server_dir_full_path/$track_hub_id";
       
-      remove_tree $study_dir if -d $study_dir;
+      if (-d $study_dir) {remove_tree $study_dir; }
       
     }
   }else{
@@ -461,7 +494,7 @@ sub get_study_ids_to_be_updated{ # gets a list of common study ids and decides w
 
     my $study_obj = EGPlantTHs::AEStudy->new($common_study_id,$plant_names_AE_response_href);
 
-## extra code
+## start of extra code
 
     my %organism_name_assembly_name_hash_AE = %{$study_obj->get_organism_names_assembly_names()}; # hash{brachypodium_distachyon}="v1.0" , hash{arabidopsis_thaliana}="TAIR10" -> in AE
 
@@ -479,15 +512,15 @@ sub get_study_ids_to_be_updated{ # gets a list of common study ids and decides w
       }     
     }  
 
-    foreach my $organism_name (keys %organism_name_assembly_name_hash_AE){ # loop through the plant names of the study in AE
+    foreach my $organism_name_in_AE (keys %organism_name_assembly_name_hash_AE){ # loop through the plant names of the study in AE
 
       my $flag_assembly_name_of_AE_found_in_THR = 0;
 
-      if($old_organism_name_assembly_id_assembly_name_hash_THR{$organism_name}){ # if this plant species is already in the THR registered under this study, i will check if they have the same assembly as in AE
+      if($old_organism_name_assembly_id_assembly_name_hash_THR{$organism_name_in_AE}){ # if this plant species is already in the THR registered under this study, i will check if they have the same assembly as in AE
 
-        foreach my $assembly_name_THR (keys %{$old_organism_name_assembly_id_assembly_name_hash_THR{$organism_name}}){
+        foreach my $assembly_name_THR (keys %{$old_organism_name_assembly_id_assembly_name_hash_THR{$organism_name_in_AE}}){
 
-          if($organism_name_assembly_name_hash_AE{$organism_name} eq $assembly_name_THR){ # if in the THR the AE assembly name does not exist, we have a new assembly of the plant
+          if($organism_name_assembly_name_hash_AE{$organism_name_in_AE} eq $assembly_name_THR){ # if in the THR the AE assembly name does not exist, we have a new assembly of the plant
     
             $flag_assembly_name_of_AE_found_in_THR =1;
 
@@ -495,21 +528,21 @@ sub get_study_ids_to_be_updated{ # gets a list of common study ids and decides w
         }
       }
 
-      if ($flag_assembly_name_of_AE_found_in_THR ==0 and $old_organism_name_assembly_id_assembly_name_hash_THR{$organism_name}) { # if the AE assembly is not found registered under this species in the THR, I need to add the new assembly to the TH
+      if ($flag_assembly_name_of_AE_found_in_THR ==0 and $old_organism_name_assembly_id_assembly_name_hash_THR{$organism_name_in_AE}){ #or keys %{$old_organism_name_assembly_id_assembly_name_hash_THR{$organism_name_in_AE}} > 1) { # if the AE assembly is not found registered under this species in the THR, I need to add the new assembly to the TH
         my @array;
-        $array[0] = "New assembly name found for study $common_study_id for species $organism_name in AE: ".$organism_name_assembly_name_hash_AE{$organism_name}." ; we had in the THR for this plant assembly name/s: ";
+        $array[0] = "New assembly name found for study $common_study_id for species $organism_name_in_AE in AE: ".$organism_name_assembly_name_hash_AE{$organism_name_in_AE}." ; we had in the THR for this plant assembly name/s: ";
         $array[1] = join (",", @assembly_names_THR);
-        $log_hash{$organism_name}=(\@array) ;
+        $log_hash{$organism_name_in_AE}=(\@array) ;
       }
     }  # if there is a new species in the study it continues with the old code, line 456 onwards..
 
-    if(%log_hash){ # if the log is not empty it means we have at least 1 new assembly in AE from a species of the current study I am looping through
+    if(%log_hash){ # if the log is not empty it means we have ***at least** 1 new assembly in AE from a species of the current study I am looping through
     
       $common_study_ids_to_be_updated_with_new_assembly{$common_study_id}=\%log_hash;
       next; # go to the next common study id
     }  
 
-### extra code end
+### end of extra code
 
     my $AE_last_processed_unix_time = $study_obj->get_AE_last_processed_unix_date; # AE current response: the unix date of the creation the cram of the study (gives me the max date of all bioreps of the study)
     my $registry_study_created_date_unix_time = eval { $registry_obj->get_Registry_hub_last_update($common_study_id) }; # date of registration of the study
@@ -539,7 +572,7 @@ sub get_study_ids_to_be_updated{ # gets a list of common study ids and decides w
           $holder_of_reason_of_update[0] = "diff_time_only";
           $common_study_ids_to_be_updated {$common_study_id}=\@holder_of_reason_of_update;
         }
-        if ( $registry_study_created_date_unix_time >= $AE_last_processed_unix_time and $are_bioreps_the_same ==0) { # different number of bioreps
+        if ( $registry_study_created_date_unix_time >= $AE_last_processed_unix_time and $are_bioreps_the_same ==0) { # different bioreps
           $holder_of_reason_of_update[0] = "diff_bioreps_only";
           $common_study_ids_to_be_updated {$common_study_id}=\@holder_of_reason_of_update;
         }
@@ -919,15 +952,13 @@ sub make_and_register_track_hub_with_new_assembly{
   my $server_dir_full_path = shift;
   my $organism_assmblAccession_EG_href = shift;
   my $plant_names_AE_response_href = shift;
-  my $common_studies_to_be_updated_with_new_assembly_href = shift;
-
 
   my $return_string;
 
   my $study_id= $study_obj->id;
   print "$line_counter.\tcreating assembly update for track hub for study $study_id\t";  
 
-  my @script_output_list = @{update_TH_with_new_assembly($study_obj, $common_studies_to_be_updated_with_new_assembly_href, $registry_obj,$plant_names_AE_response_href, $server_dir_full_path ,$organism_assmblAccession_EG_href )};
+  my @script_output_list = @{update_TH_with_new_assembly($study_obj, $registry_obj,$plant_names_AE_response_href, $server_dir_full_path ,$organism_assmblAccession_EG_href )};
   my $script_output = $script_output_list[0];
   my @assembly_names_assembly_ids_pairs = @{$script_output_list[1]};
 
@@ -1030,13 +1061,13 @@ sub register_track_hub_in_TH_registry{
 sub update_TH_with_new_assembly{ # i need to update the genomes.txt file and add a new assembly folder for the updated assembly of the species and also update the rest if any species of the study
 
   my $study_obj = shift;
-  my $common_studies_to_be_updated_with_new_assembly_href = shift;
   my $registry_obj = shift;
   my $plant_names_AE_response_href = shift;
   my $server_dir_full_path = shift;
   my $organism_assmblAccession_EG_href = shift; #$hash{"brachypodium_distachyon"} = "GCA_000005505.1"  
 
   my $study_id = $study_obj->id;
+  my %assembly_name_accession_pairs_hash; 
   my @assembly_name_accession_pairs; # for the THR, to do the registration of the TH  , elements of array like : "ASM242v1,GCA_000002425.1"
 
   my %organism_name_assembly_name_hash_AE = %{$study_obj->get_organism_names_assembly_names()}; # AE: hash{brachypodium_distachyon}="v1.0" , hash{arabidopsis_thaliana}="TAIR10" -> in AE
@@ -1046,32 +1077,28 @@ sub update_TH_with_new_assembly{ # i need to update the genomes.txt file and add
   # THR: hash{brachypodium_distachyon}{v1.0}="GCA_000005505.1" , hash{brachypodium_distachyon}{v2.0}="GCA_000005505.2" , $hash{triticum_aestivum}{IWGSC1+popseq}="0000" , $hash{triticum_aestivum}{TGACv1}="0000"
   my %old_organism_name_assembly_id_assembly_name_hash_THR = %{$registry_obj->give_species_names_assembly_names_of_track_hub($study_id)};
 
-  #$hash_log{$organism_name}="New assembly name found for study $common_study_id for species $organism_name in AE: ".$organism_name_assembly_name_hash_AE{$organism_name}." ; we had in the THR for this plant, assembly name/s: ",join (",", @assembly_names_THR)) ;
-  my %hash_log = %{$common_studies_to_be_updated_with_new_assembly_href->{$study_id}}; 
-
   my @return_array;
 
   foreach my $species_name (keys %organism_name_assembly_name_hash_AE){ # I loop through the species that AE gives me for the this study currently
 
     my $assembly_name_AE  = $organism_name_assembly_name_hash_AE{$species_name};
-    my $assembly_name_accession_pair = $assembly_name_AE.",".$organism_assmblAccession_EG_href->{$species_name}; 
-    push(@assembly_name_accession_pairs,$assembly_name_accession_pair); # should be "ASM242v1,GCA_000002425.1,IRGSP-1.0,GCA_000005425.2";
+    $assembly_name_accession_pairs_hash{$assembly_name_AE}{$organism_assmblAccession_EG_href->{$species_name}}=1;
 
-    if (!$hash_log{$species_name}){   # the species has the same assembly in the THR and in AE, but I will update it anyways
-       
-      remove_tree "$server_dir_full_path/$study_id/$assembly_name_AE" if -d "$server_dir_full_path/$study_id/$assembly_name_AE" or die "I could not remove dir $server_dir_full_path/$study_id/$assembly_name_AE for $species_name\n";    
+    foreach my $assembly_name (keys %{$old_organism_name_assembly_id_assembly_name_hash_THR{$species_name}} ){
 
-    }else{ # for same species have new assembly so I need to get its old assembly info from the THR
-
-      foreach my $assembly_name (keys %{$old_organism_name_assembly_id_assembly_name_hash_THR{$species_name}} ){
-
-        my $assembly_name_accession_pair_old = $assembly_name . ",". $old_organism_name_assembly_id_assembly_name_hash_THR{$species_name}{$assembly_name} ;
-        push(@assembly_name_accession_pairs,$assembly_name_accession_pair_old); # should be "ASM242v1,GCA_000002425.1,IRGSP-1.0,GCA_000005425.2";
-        
-      }       
+      $assembly_name_accession_pairs_hash{$assembly_name}{$old_organism_name_assembly_id_assembly_name_hash_THR{$species_name}{$assembly_name}}=1;
     }
 
-    `mkdir $server_dir_full_path/$study_id/$assembly_name_AE`; #  I make updated assembly directories either way from AE
+    @assembly_name_accession_pairs=();
+    foreach my $assembly_name (keys %assembly_name_accession_pairs_hash){
+      foreach my $assembly_accession (keys %{$assembly_name_accession_pairs_hash{$assembly_name}}){
+        my $string= $assembly_name . ",". $assembly_accession;
+        push(@assembly_name_accession_pairs, $string);
+      }
+    }
+
+    if (-d "$server_dir_full_path/$study_id/$assembly_name_AE") {remove_tree "$server_dir_full_path/$study_id/$assembly_name_AE" or die "I could not remove dir $server_dir_full_path/$study_id/$assembly_name_AE for $species_name\n";}
+    mkdir "$server_dir_full_path/$study_id/$assembly_name_AE"; #  I make updated assembly directories either way from AE
     my $return_of_make_trackDbtxt_file = $track_hub_creator_obj->make_trackDbtxt_file($server_dir_full_path, $study_obj ,$assembly_name_AE);
 
     if (!$return_of_make_trackDbtxt_file) { # method returns 0 when there is no ENA warehouse metadata
@@ -1095,7 +1122,7 @@ sub update_TH_with_new_assembly{ # i need to update the genomes.txt file and add
 
       foreach my $assembly_name (keys %{$old_organism_name_assembly_id_assembly_name_hash_THR{$species_name_THR}}){ #hash{brachypodium_distachyon}{v2.0}="GCA_000005505.2"  
 
-        remove_tree "$server_dir_full_path/$study_id/$assembly_name" if -d "$server_dir_full_path/$study_id/$assembly_name";
+        if (-d "$server_dir_full_path/$study_id/$assembly_name") {remove_tree "$server_dir_full_path/$study_id/$assembly_name" ; }
       }
     }
   }
