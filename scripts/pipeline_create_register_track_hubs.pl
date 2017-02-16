@@ -181,7 +181,7 @@ sub update_common_studies{
   if(scalar (keys %common_studies_to_be_updated) == 0 and scalar (keys (%{$common_studies_to_be_updated_with_new_assembly_href}) ==0)){
     print "\n\nNo common studies between current AE API and registered studies in the THR are found to need updating\n\n";
   }else{
-    print "\nStudies to be updated (".scalar (keys %common_studies_to_be_updated)." studies and ". scalar (keys %{$common_studies_to_be_updated_with_new_assembly_href}) ." with new assembly) from last time the pipeline was run:\n\n";
+    print "\nStudies to be updated (".scalar (keys %common_studies_to_be_updated)." studies [including updates with archived assemblies] and ". scalar (keys %{$common_studies_to_be_updated_with_new_assembly_href}) ." with new assembly [creating a new assembly and archiving the old one/s]) from last time the pipeline was run:\n\n";
   }
 
   my $study_counter = 0;
