@@ -179,7 +179,7 @@ if($study_ids_file_content){
   }
 
   if(scalar (keys %{$unsuccessful_studies_href_non_new_assemblies}) > 0){
-    print "From the updates/new with no new assemblies\n\n":
+    print "From the updates/new with no new assemblies\n\n";
   }
   my $counter=0;
   foreach my $reason_of_failure (keys %{$unsuccessful_studies_href_non_new_assemblies}){  # hash looks like: $unsuccessful_studies{"Missing all Samples in AE REST API"}{$study_id}= 1;
@@ -192,7 +192,7 @@ if($study_ids_file_content){
   }
 
   if (scalar (keys %{$unsuccessful_studies_href_new_assemblies}) > 0){
-        print "\nFrom the updates with new assemblies\n\n":
+        print "\nFrom the updates with new assemblies\n\n";
   }
   foreach my $reason_of_failure (keys %{$unsuccessful_studies_href_new_assemblies}){  # hash looks like: $unsuccessful_studies{"Missing all Samples in AE REST API"}{$study_id}= 1;
 
