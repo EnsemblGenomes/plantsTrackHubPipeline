@@ -265,7 +265,7 @@ sub create_url_for_call_sample_metadata { # i am calling this method for a sampl
 
   my @key_values = @{$table_ref};
 
-  my $url = "http://www.ebi.ac.uk/ena/data/warehouse/search?query=\%22accession=$sample_id\%22&result=sample&display=report&fields=";
+  my $url = "http://www.ebi.ac.uk/ena/data/warehouse/search?query=\%22accession=\%22$sample_id\%22\%22&result=sample&display=report&fields=";
 
   my $counter = 0;
 
@@ -399,6 +399,7 @@ sub get_last_updated_cram_file_location_hash{
       $unique_cram_names{$cram_name}{$assembly_name}=$location_of_max_timestamp; #the hash would be like this: $unique_cram_names_href{DRR008478"}{"TAIR10"}="ftp.sra.ebi.ac.uk/vol1/ERZ270/ERZ270564/DRR008478.cram"
     }
   }
+
   return \%unique_cram_names;
 }
 
