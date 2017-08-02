@@ -8,7 +8,7 @@ use HTTP::Request::Common qw/GET DELETE POST/;
 use LWP::UserAgent;
 use EGPlantTHs::EG;
 
-my $server = "http://beta.trackhubregistry.org";
+my $server = "http://www.trackhubregistry.org";
 my $ua = LWP::UserAgent->new;
 $| = 1; 
 
@@ -315,7 +315,7 @@ sub get_Registry_hub_last_update { # gives the last update date(unix time) of th
     if ($response->is_success) {
       $doc = from_json($response->content);
     } else {  
-      die "\tCouldn't get trackdb at", $trackdb->{uri}." from study $name in the Registry when trying to get the last update date \n";
+      die "\tCouldn't get trackdb at ", $trackdb->{uri}." from study $name in the Registry when trying to get the last update date \n";
     }
 
     if (exists $doc->{updated}) {
@@ -361,7 +361,7 @@ sub give_all_bioreps_of_study_from_Registry {
 
       print "\t".$i .") Retrying attempt: Retrying after 5s...\n";
       sleep 5;
-      ($request , $response) = $self->make_authorised_request("http://www.trackhubregistry.org/api/trackhub/$name");
+      ($request , $response) = $self->make_authorised_request("$server/api/trackhub/$name");
       if($response->is_success){
         $hub = from_json($response->content);
         $flag_success =1 ;
@@ -450,7 +450,7 @@ sub give_species_names_assembly_names_of_track_hub {
   defined $name
     or print "Track hub name parameter required to get the track hub's assembly id from the Track Hub Registry\n" and return 0;
 
-  my ($request , $response) = $self->make_authorised_request("http://www.trackhubregistry.org/api/trackhub/$name");
+  my ($request , $response) = $self->make_authorised_request("$server/api/trackhub/$name");
   my $hub;
 
   if ($response->is_success) {
@@ -470,7 +470,7 @@ sub give_species_names_assembly_names_of_track_hub {
     for(my $i=1; $i<=10; $i++) {
       print "\t".$i .") Retrying attempt: Retrying after 5s...\n";
       sleep 5;
-      ($request , $response) = $self->make_authorised_request("http://www.trackhubregistry.org/api/trackhub/$name");
+      ($request , $response) = $self->make_authorised_request("$server/api/trackhub/$name");
       
       if($response->is_success){
         $hub = from_json($response->content);
